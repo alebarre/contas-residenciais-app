@@ -3,8 +3,7 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-itens',
   imports: [],
-  templateUrl: './itens.html',
-  styleUrl: './itens.scss',
+  template: '',
 })
 export class Itens {
 
