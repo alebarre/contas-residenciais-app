@@ -1,0 +1,17 @@
+0 verbose cli /home/alebarre/.nvm/versions/node/v24.13.0/bin/node /home/alebarre/.nvm/versions/node/v24.13.0/bin/npm
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:/home/alebarre/.nvm/versions/node/v24.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/alebarre/Projetos/angular/contas-residenciais/.npmrc
+5 silly config load:file:/home/alebarre/.npmrc
+6 silly config load:file:/home/alebarre/.nvm/versions/node/v24.13.0/etc/npmrc
+7 verbose title npm
+8 verbose argv "--cache" "clean"
+9 verbose logfile logs-max:10 dir:/home/alebarre/Projetos/angular/contas-residenciais/clean/_logs/2026-01-29T00_45_29_421Z-
+10 verbose logfile /home/alebarre/Projetos/angular/contas-residenciais/clean/_logs/2026-01-29T00_45_29_421Z-debug-0.log
+11 verbose cwd /home/alebarre/Projetos/angular/contas-residenciais
+12 verbose os Linux 6.14.0-37-generic
+13 verbose node v24.13.0
+14 verbose npm  v11.6.2
+15 verbose exit 1
+16 verbose code 1

@@ -1,5 +1,6 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -8,11 +9,11 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   template: `
     <aside class="sidebar" [class.closed]="!open">
       <div class="user">
-        <img class="avatar" [src]="avatarUrl" alt="avatar" />
+        <img class="avatar" [src]="avatarUrl()" alt="avatar" />
 
         <div class="meta">
-          <div class="name">{{ userName }}</div>
-          <div class="email">{{ userEmail }}</div>
+          <div class="name">{{ userName() }}</div>
+          <div class="email">{{ userEmail() }}</div>
         </div>
 
         <button type="button" class="toggle" (click)="toggle.emit()">⇆</button>
@@ -39,6 +40,13 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           <span class="label">Itens</span>
         </a>
       </nav>
+
+      <div class="footer">
+        <button type="button" class="logout" (click)="logout()">
+          <span class="icon">🚪</span>
+          <span class="label">Sair</span>
+        </button>
+      </div>
     </aside>
   `,
   styles: [`
@@ -99,15 +107,13 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       z-index: 2;
     }
 
-    /* ✅ MODO FECHADO: mantém avatar e botão, esconde textos */
+    /* MODO FECHADO: mantém avatar + botão, some meta */
     .sidebar.closed .user {
       grid-template-columns: 1fr;
       justify-items: center;
       gap: 8px;
     }
-
     .sidebar.closed .meta { display: none; }
-
     .sidebar.closed .toggle { width: 44px; }
 
     /* Menu */
@@ -141,22 +147,55 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
     .icon { width: 24px; text-align: center; }
 
-    /* ✅ Fechado: só ícones no menu */
+    /* Fechado: só ícones */
     .sidebar.closed .menu a {
       grid-template-columns: 1fr;
       justify-items: center;
       padding: 10px 0;
     }
-
     .sidebar.closed .menu a .label { display: none; }
+
+    /* Footer / Logout */
+    .footer { margin-top: 12px; }
+
+    .logout {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .sidebar.closed .logout {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      padding: 10px 0;
+    }
+
+    .sidebar.closed .logout .label { display: none; }
   `]
 })
 export class SidebarComponent {
   @Input() open = true;
   @Output() toggle = new EventEmitter<void>();
 
-  // Placeholder: depois vamos ler do AuthService (usuário logado)
-  userName = 'Usuário';
-  userEmail = 'usuario@email.com';
-  avatarUrl = 'https://i.pravatar.cc/80';
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
+  user = computed(() => this.auth.user());
+
+  userName = computed(() => this.user()?.nome ?? 'Usuário');
+  userEmail = computed(() => this.user()?.email ?? '');
+  avatarUrl = computed(() => this.user()?.avatarUrl ?? 'https://i.pravatar.cc/80');
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
+  }
 }
