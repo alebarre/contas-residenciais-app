@@ -8,23 +8,25 @@ export class DashboardService {
   constructor(private despesasService: DespesasService) {}
 
   getResumo(ano: number, mes: number): Observable<DashboardResumo> {
-    // mock “inteligente”: calcula a partir das despesas
     return this.despesasService.listarPorMes(ano, mes).pipe(
-      map(despesas => {
-        const contasDoMes = despesas.length;
-        const totalPagoNoMes = despesas.reduce((acc, d) => acc + d.valor, 0);
+      map(despesasDoMes => {
+        const contasDoMes = despesasDoMes.length;
+        const totalPagoNoMes = despesasDoMes.reduce((acc, d) => acc + (d.valor ?? 0), 0);
 
-        const maior = despesas.reduce<{ itemNome: string; valor: number } | undefined>((best, d) => {
-          if (!best || d.valor > best.valor) return { itemNome: d.itemNome, valor: d.valor };
+        const maior = despesasDoMes.reduce<{ itemNome: string; valor: number } | undefined>((best, d) => {
+          const v = d.valor ?? 0;
+          if (!best || v > best.valor) return { itemNome: d.itemNome, valor: v };
           return best;
         }, undefined);
 
-        // histórico mock (12 meses) — depois vem do backend
-        const historicoMensal = Array.from({ length: 12 }).map((_, i) => {
-          const m = i + 1;
-          const total = m === mes ? totalPagoNoMes : 0;
-          return { mes: m, total };
-        });
+        // histórico anual: soma por mês (1..12)
+        const historicoMensal = Array.from({ length: 12 }).map((_, i) => ({ mes: i + 1, total: 0 }));
+
+        // Para não abrir o storage diretamente aqui (mantemos simples):
+        // Vamos montar o histórico pedindo mês a mês do service.
+        // Como é mock/local e leve, isso é ok por enquanto.
+        // (Quando houver backend, isso vira 1 endpoint de resumo anual.)
+        // Aqui fazemos de forma síncrona com calls encadeadas no próximo passo (abaixo).
 
         return {
           contasDoMes,
@@ -34,5 +36,27 @@ export class DashboardService {
         };
       })
     );
+  }
+
+  // ✅ novo método: histórico anual real (12 meses)
+  getHistoricoAnual(ano: number): Observable<Array<{ mes: number; total: number }>> {
+    const calls = Array.from({ length: 12 }).map((_, i) => i + 1);
+
+    // Estratégia simples: soma mês a mês
+    return new Observable(sub => {
+      const historico = calls.map(m => ({ mes: m, total: 0 }));
+      let done = 0;
+
+      calls.forEach(mes => {
+        this.despesasService.listarPorMes(ano, mes).subscribe(list => {
+          historico[mes - 1].total = list.reduce((acc, d) => acc + (d.valor ?? 0), 0);
+          done++;
+          if (done === 12) {
+            sub.next(historico);
+            sub.complete();
+          }
+        });
+      });
+    });
   }
 }

@@ -2,43 +2,51 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Despesa } from '../models/despesa.model';
 
+const STORAGE_KEY = 'despesas';
+
 @Injectable({ providedIn: 'root' })
 export class DespesasService {
-  listarPorMes(ano: number, mes: number): Observable<Despesa[]> {
-    // mock simples (depois vira GET /api/despesas?ano=...&mes=...)
-    const base: Despesa[] = [
-      {
-        id: 1,
-        dataPagamento: `${ano}-${String(mes).padStart(2, '0')}-05`,
-        dataVencimento: `${ano}-${String(mes).padStart(2, '0')}-10`,
-        itemId: 1,
-        itemNome: 'Light (Luz)',
-        descricao: 'Conta de energia',
-        bancoPagamento: 'Nubank',
-        valor: 312.45
-      },
-      {
-        id: 2,
-        dataPagamento: `${ano}-${String(mes).padStart(2, '0')}-08`,
-        dataVencimento: `${ano}-${String(mes).padStart(2, '0')}-12`,
-        itemId: 2,
-        itemNome: 'CEDAE (Água)',
-        descricao: 'Conta de água',
-        bancoPagamento: 'Banco do Brasil',
-        valor: 178.10
-      },
-      {
-        id: 3,
-        dataPagamento: `${ano}-${String(mes).padStart(2, '0')}-15`,
-        dataVencimento: `${ano}-${String(mes).padStart(2, '0')}-15`,
-        itemId: 5,
-        itemNome: 'Fisioterapeuta',
-        descricao: 'Sessões do mês',
-        bancoPagamento: 'Itaú',
-        valor: 480.00
-      }
-    ];
+  private despesas: Despesa[] = this.load();
 
-    return of(base);
+  private load(): Despesa[] {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  private persist(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.despesas));
+  }
+
+  listarPorMes(ano: number, mes: number): Observable<Despesa[]> {
+    const mm = String(mes).padStart(2, '0');
+    const prefix = `${ano}-${mm}`;
+
+    const list = this.despesas
+      .filter(d => (d.dataVencimento ?? '').startsWith(prefix))
+      .sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
+
+    return of(list);
+  }
+
+  criar(d: Omit<Despesa, 'id'>): Observable<Despesa> {
+    const novo: Despesa = { ...d, id: Date.now() };
+    this.despesas.push(novo);
+    this.persist();
+    return of(novo);
+  }
+
+  atualizar(d: Despesa): Observable<Despesa> {
+    const idx = this.despesas.findIndex(x => x.id === d.id);
+    if (idx >= 0) {
+      this.despesas[idx] = { ...d };
+      this.persist();
+    }
+    return of(d);
+  }
+
+  excluir(id: number): Observable<void> {
+    this.despesas = this.despesas.filter(d => d.id !== id);
+    this.persist();
+    return of(void 0);
   }
 }

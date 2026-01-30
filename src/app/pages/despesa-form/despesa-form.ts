@@ -4,6 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ItensService } from '../../services/itens.service';
 import { Item, ItemTipo } from '../../models/item.model';
+import { DespesasService } from '../../services/despesas.service';
+
 
 @Component({
   selector: 'app-despesa-form',
@@ -34,7 +36,6 @@ import { Item, ItemTipo } from '../../models/item.model';
           <div class="field">
             <label>Item</label>
             <select formControlName="itemId">
-              <option value="" disabled>Selecione...</option>
               <option *ngFor="let it of itensFiltrados()" [value]="it.id">{{ it.nome }}</option>
             </select>
             <small class="hint" *ngIf="form.controls.itemId.touched && form.controls.itemId.invalid">
@@ -123,36 +124,45 @@ export class DespesaFormComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private itensService = inject(ItensService);
+  private despesasService = inject(DespesasService);
+
 
   loading = false;
   success = '';
   error = '';
 
   itens = signal<Item[]>([]);
+  tipoSig = signal<ItemTipo>('EMPRESA');
 
   form = this.fb.group({
     tipo: ['EMPRESA' as ItemTipo, [Validators.required]],
     itemId: ['', [Validators.required]],
     dataVencimento: ['', [Validators.required]],
-    dataPagamento: ['', [Validators.required]],
+    dataPagamento: ['', ],
     descricao: ['', [Validators.required, Validators.minLength(3)]],
     bancoPagamento: ['', [Validators.required, Validators.minLength(2)]],
     valor: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
 
   itensFiltrados = computed(() => {
-    const tipo = this.form.controls.tipo.value as ItemTipo;
+    const tipo = this.tipoSig();
     return this.itens().filter(i => i.ativo && i.tipo === tipo);
   });
 
   constructor() {
-    this.itensService.listar().subscribe(list => {
-      this.itens.set(list);
-      this.syncItemSelection();
-    });
+  // valor inicial do form -> signal
+  this.tipoSig.set(this.form.controls.tipo.value as ItemTipo);
 
-    this.form.controls.tipo.valueChanges.subscribe(() => this.syncItemSelection());
-  }
+  this.itensService.listar().subscribe(list => {
+    this.itens.set(list);
+    this.syncItemSelection();
+  });
+
+  this.form.controls.tipo.valueChanges.subscribe(v => {
+    this.tipoSig.set(v as ItemTipo);     // Faz computed recalcular
+    this.syncItemSelection();            // limpa itemId se não for do tipo
+  });
+}
 
   private syncItemSelection(): void {
     const current = this.form.controls.itemId.value;
@@ -166,17 +176,23 @@ export class DespesaFormComponent {
   }
 
   salvar(): void {
-    this.success = '';
-    this.error = '';
-    if (this.form.invalid) return;
+  this.success = '';
+  this.error = '';
+  if (this.form.invalid) return;
 
-    this.loading = true;
+  const v = this.form.getRawValue();
 
-    // ✅ mock (depois vira POST /api/despesas)
-    setTimeout(() => {
-      this.loading = false;
-      this.success = 'Despesa salva (mock).';
-      setTimeout(() => this.router.navigateByUrl('/app/dashboard'), 500);
-    }, 300);
-  }
+  this.loading = true;
+
+  this.despesasService.criar({
+    itemId: Number(v.itemId),
+    itemNome: this.itens().find(i => i.id === Number(v.itemId))?.nome ?? '',
+    dataVencimento: v.dataVencimento!,
+    dataPagamento: v.dataPagamento ? v.dataPagamento : null,
+    descricao: v.descricao!,
+    bancoPagamento: v.bancoPagamento!,
+    valor: Number(v.valor),
+  }).subscribe(() => this.router.navigateByUrl('/app/dashboard'));
+}
+
 }

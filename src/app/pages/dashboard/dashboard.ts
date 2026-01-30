@@ -5,11 +5,12 @@ import { DashboardService } from '../../services/dashboard.service';
 import { DespesasService } from '../../services/despesas.service';
 import { DashboardResumo } from '../../models/dashboard.model';
 import { Despesa } from '../../models/despesa.model';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="header">
       <div>
@@ -62,12 +63,66 @@ import { Despesa } from '../../models/despesa.model';
           <div class="muted tiny">Mock visual (vamos trocar por gráfico depois)</div>
         </div>
       </div>
+      <div class="card paid">
+        <div class="k">Pagas</div>
+        <div class="v">{{ pagasQtd() }}</div>
+        <div class="muted">{{ pagasTotal() | currency:'BRL' }}</div>
+      </div>
+
+      <div class="card pending">
+        <div class="k">Pendentes</div>
+        <div class="v">{{ pendentesQtd() }}</div>
+        <div class="muted">{{ pendentesTotal() | currency:'BRL' }}</div>
+      </div>
     </section>
 
     <section class="list">
+      
       <div class="list-header">
         <h3>Contas cadastradas no mês</h3>
         <div class="muted">{{ despesas().length }} registro(s)</div>
+      </div>
+
+      <div class="list-header">
+        <div class="edit-card" *ngIf="editando() as e">
+          <div class="edit-title">Editando: <b>{{ e.itemNome }}</b></div>
+
+          <div class="edit-grid">
+            <div class="field">
+              <label>Vencimento</label>
+              <input type="date" [(ngModel)]="e.dataVencimento" />
+            </div>
+
+            <div class="field">
+              <label>Pagamento (opcional)</label>
+              <input type="date" [(ngModel)]="e.dataPagamento" />
+            </div>
+
+            <div class="field">
+              <label>Banco</label>
+              <input type="text" [(ngModel)]="e.bancoPagamento" />
+            </div>
+
+            <div class="field">
+              <label>Valor</label>
+              <input type="number" step="0.01" [(ngModel)]="e.valor" />
+            </div>
+
+            <div class="field full">
+              <label>Descrição</label>
+              <input type="text" [(ngModel)]="e.descricao" />
+            </div>
+          </div>
+
+          <div class="edit-actions">
+            <button type="button" class="btn" (click)="cancelarEdicao()">Cancelar</button>
+            <button type="button" class="btn primary" (click)="salvarEdicao()">Salvar</button>
+          </div>
+
+          <p class="edit-error" *ngIf="erroEdicao()">{{ erroEdicao() }}</p>
+
+        </div>
+
       </div>
 
       <div class="table-wrap" *ngIf="despesas().length; else empty">
@@ -84,7 +139,7 @@ import { Despesa } from '../../models/despesa.model';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let d of despesas()">
+            <tr *ngFor="let d of despesas()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
               <td>{{ d.dataVencimento }}</td>
               <td>{{ d.dataPagamento }}</td>
               <td>{{ d.itemNome }}</td>
@@ -92,8 +147,8 @@ import { Despesa } from '../../models/despesa.model';
               <td>{{ d.bancoPagamento }}</td>
               <td class="right">{{ d.valor | currency:'BRL' }}</td>
               <td class="right">
-                <button type="button" class="btn-sm" disabled>Editar</button>
-                <button type="button" class="btn-sm danger" disabled>Excluir</button>
+                <button type="button" class="btn-sm" (click)="editar(d)">Editar</button>
+                <button type="button" class="btn-sm danger" (click)="excluir(d)">Excluir</button>
               </td>
             </tr>
           </tbody>
@@ -148,10 +203,16 @@ import { Despesa } from '../../models/despesa.model';
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 16px;
     }
+
+    .card.paid { background: #f0fdf4; border-color: #bbf7d0; }     /* verde claro */
+    .card.pending { background: #fffbeb; border-color: #fde68a; }  /* amarelo claro */
+
+    .row-paid { background: #f0fdf4; }     /* verde + claro */
+    .row-pending { background: #fffbeb; }  /* amarelo + claro */
 
     .card {
       border: 1px solid #e5e7eb;
@@ -199,6 +260,46 @@ import { Despesa } from '../../models/despesa.model';
       margin-bottom: 10px;
     }
 
+    .edit-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      margin: 10px 0 12px;
+    }
+
+    .edit-title { margin-bottom: 10px; color: #374151; }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .edit-grid .field { display: grid; gap: 6px; }
+    .edit-grid .full { grid-column: 1 / -1; }
+
+    .edit-grid label { font-size: 12px; color: #374151; }
+
+    .edit-grid input {
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+    }
+
+    .edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .edit-grid { grid-template-columns: 1fr; }
+      .edit-grid .full { grid-column: auto; }
+    }
+
+
     h3 { margin: 0; }
 
     .table-wrap { overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; }
@@ -212,7 +313,6 @@ import { Despesa } from '../../models/despesa.model';
       background: #fff;
       padding: 6px 8px;
       border-radius: 10px;
-      cursor: not-allowed;
       margin-left: 6px;
       white-space: nowrap;
     }
@@ -227,8 +327,10 @@ import { Despesa } from '../../models/despesa.model';
       background: #fafafa;
     }
 
-    @media (max-width: 1100px) {
-      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .edit-error { color: #b91c1c; margin: 8px 0 0; }
+
+    @media (max-width: 1300px) {
+      .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
     @media (max-width: 640px) {
@@ -251,6 +353,19 @@ export class DashboardComponent {
   resumo = signal<DashboardResumo | null>(null);
   despesas = signal<Despesa[]>([]);
 
+  pagas = computed(() => this.despesas().filter(d => !!d.dataPagamento));
+  pendentes = computed(() => this.despesas().filter(d => !d.dataPagamento));
+
+  pagasQtd = computed(() => this.pagas().length);
+  pendentesQtd = computed(() => this.pendentes().length);
+
+  pagasTotal = computed(() => this.pagas().reduce((acc, d) => acc + (d.valor ?? 0), 0));
+  pendentesTotal = computed(() => this.pendentes().reduce((acc, d) => acc + (d.valor ?? 0), 0));
+
+  editando = signal<Despesa | null>(null);
+  editandoOriginal = signal<Despesa | null>(null);
+  erroEdicao = signal<string>('');
+
   mesLabel = computed(() => {
     const m = this.mes();
     const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -265,13 +380,74 @@ export class DashboardComponent {
     this.router.navigateByUrl('despesas/nova');
   }
 
+  editar(d: Despesa): void {
+    this.erroEdicao.set('');
+    const copia = { ...d, dataPagamento: d.dataPagamento ?? null };
+    this.editandoOriginal.set({ ...copia }); // guarda original
+    this.editando.set(copia);                // edição
+  }
+
+
+  cancelarEdicao(): void {
+    this.erroEdicao.set('');
+    this.editando.set(null);
+    this.editandoOriginal.set(null);
+  }
+
+
+  salvarEdicao(): void {
+    const e = this.editando();
+    const orig = this.editandoOriginal();
+    if (!e || !orig) return;
+
+    this.erroEdicao.set('');
+
+    // vencimento é obrigatório
+    if (!e.dataVencimento || !e.dataVencimento.trim()) {
+      this.erroEdicao.set('A data de vencimento é obrigatória.');
+      // opcional: restaura o vencimento original automaticamente
+      e.dataVencimento = orig.dataVencimento;
+      this.editando.set({ ...e });
+      return;
+    }
+
+    const atualizado: Despesa = {
+      ...e,
+      dataPagamento: e.dataPagamento ? e.dataPagamento : null
+    };
+
+    this.despesasService.atualizar(atualizado).subscribe(() => {
+      this.editando.set(null);
+      this.editandoOriginal.set(null);
+      this.reload();
+    });
+  }
+
+
+  excluir(d: Despesa): void {
+    if (!confirm(`Excluir "${d.itemNome}" (${d.dataVencimento})?`)) return;
+
+    this.despesasService.excluir(d.id).subscribe(() => {
+      // se estava editando este item, fecha
+      if (this.editando()?.id === d.id) this.editando.set(null);
+      this.reload();
+    });
+  }
+
+
   reload(): void {
     const ano = this.ano();
     const mes = this.mes();
 
-    this.dashboardService.getResumo(ano, mes).subscribe(r => this.resumo.set(r));
     this.despesasService.listarPorMes(ano, mes).subscribe(list => this.despesas.set(list));
+
+    this.dashboardService.getResumo(ano, mes).subscribe(r => {
+      this.dashboardService.getHistoricoAnual(ano).subscribe(hist => {
+        this.resumo.set({ ...r, historicoMensal: hist });
+      });
+    });
   }
+
 
   prevMonth(): void {
     let a = this.ano();
