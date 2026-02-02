@@ -140,8 +140,8 @@ import { FormsModule } from '@angular/forms';
           </thead>
           <tbody>
             <tr *ngFor="let d of despesas()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
-              <td>{{ d.dataVencimento }}</td>
-              <td>{{ d.dataPagamento }}</td>
+              <td>{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
+              <td>{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
               <td>{{ d.itemNome }}</td>
               <td>{{ d.descricao }}</td>
               <td>{{ d.bancoPagamento }}</td>

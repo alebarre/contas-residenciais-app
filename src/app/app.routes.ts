@@ -15,8 +15,8 @@ export const routes: Routes = [
     children: [
       { path: 'dashboard', loadComponent: () => import('../app/pages/dashboard/dashboard').then(m => m.DashboardComponent) },
       { path: 'itens', loadComponent: () => import('../app/pages/itens/itens').then(m => m.ItensComponent) },
-      { path: 'relatorio-mensal', loadComponent: () => import('../app/pages/relatorio-mensal/relatorio-mensal').then(m => m.RelatorioMensal) },
-      { path: 'relatorio-anual', loadComponent: () => import('../app/pages/relatorio-anual/relatorio-anual').then(m => m.RelatorioAnual) },
+      { path: 'relatorio-mensal', loadComponent: () => import('../app/pages/relatorio-mensal/relatorio-mensal').then(m => m.RelatorioMensalComponent) },
+      { path: 'relatorio-anual', loadComponent: () => import('../app/pages/relatorio-anual/relatorio-anual').then(m => m.RelatorioAnualComponent) },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ]
   },
