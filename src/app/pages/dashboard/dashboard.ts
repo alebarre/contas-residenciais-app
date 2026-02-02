@@ -6,6 +6,9 @@ import { DespesasService } from '../../services/despesas.service';
 import { DashboardResumo } from '../../models/dashboard.model';
 import { Despesa } from '../../models/despesa.model';
 import { FormsModule } from '@angular/forms';
+import { ConfirmService } from '../../services/confirm.service';
+import { ToastService } from '../../services/toast.service';
+
 
 @Component({
   selector: 'app-dashboard',
@@ -345,6 +348,8 @@ export class DashboardComponent {
   private router = inject(Router);
   private dashboardService = inject(DashboardService);
   private despesasService = inject(DespesasService);
+  private confirmService = inject(ConfirmService);
+  private toast = inject(ToastService);
 
   private now = new Date();
   ano = signal(this.now.getFullYear());
@@ -387,52 +392,102 @@ export class DashboardComponent {
     this.editando.set(copia);                // edição
   }
 
+/* cancelarEdicao - descarta edição com confirmação se houver mudanças.
+e não houver mudanças, descarta diretamente.
+Se não houver edição em andamento, apenas limpa os sinais.
+Exibe toast de informação ao descartar mudanças.
+Retorna uma Promise<void> para aguardar a confirmação do usuário. */
+async cancelarEdicao(): Promise<void> {
+  this.erroEdicao.set('');
 
-  cancelarEdicao(): void {
-    this.erroEdicao.set('');
+  const e = this.editando();
+  const o = this.editandoOriginal();
+
+  if (!e || !o) {
     this.editando.set(null);
     this.editandoOriginal.set(null);
+    return;
   }
 
+  const mudou =
+    (e.dataVencimento ?? '') !== (o.dataVencimento ?? '') ||
+    (e.dataPagamento ?? '') !== (o.dataPagamento ?? '') ||
+    (e.bancoPagamento ?? '') !== (o.bancoPagamento ?? '') ||
+    (e.descricao ?? '') !== (o.descricao ?? '') ||
+    Number(e.valor ?? 0) !== Number(o.valor ?? 0);
 
-  salvarEdicao(): void {
-    const e = this.editando();
-    const orig = this.editandoOriginal();
-    if (!e || !orig) return;
+  if (!mudou) {
+    this.editando.set(null);
+    this.editandoOriginal.set(null);
+    return;
+  }
 
-    this.erroEdicao.set('');
+  const ok = await this.confirmService.ask({
+    title: 'Descartar alterações',
+    message: 'Você fez alterações nesta despesa. Deseja descartar?',
+    confirmText: 'Descartar',
+    cancelText: 'Continuar editando',
+    danger: true
+  });
 
-    // vencimento é obrigatório
-    if (!e.dataVencimento || !e.dataVencimento.trim()) {
-      this.erroEdicao.set('A data de vencimento é obrigatória.');
-      // opcional: restaura o vencimento original automaticamente
-      e.dataVencimento = orig.dataVencimento;
-      this.editando.set({ ...e });
-      return;
-    }
+  if (!ok) return;
 
-    const atualizado: Despesa = {
-      ...e,
-      dataPagamento: e.dataPagamento ? e.dataPagamento : null
-    };
+  this.editando.set(null);
+  this.editandoOriginal.set(null);
+  this.toast.info('Alterações descartadas.');
+}
 
-    this.despesasService.atualizar(atualizado).subscribe(() => {
-      this.editando.set(null);
-      this.editandoOriginal.set(null);
-      this.reload();
+
+salvarEdicao(): void {
+  const e = this.editando();
+  const orig = this.editandoOriginal();
+  if (!e || !orig) return;
+
+  this.erroEdicao.set('');
+
+  // vencimento obrigatório
+  if (!e.dataVencimento || !e.dataVencimento.trim()) {
+    this.erroEdicao.set('A data de vencimento é obrigatória.');
+    // restaura o vencimento original
+    e.dataVencimento = orig.dataVencimento;
+    this.editando.set({ ...e });
+    this.toast.error('Informe a data de vencimento para salvar.');
+    return;
+  }
+
+  const atualizado: Despesa = {
+    ...e,
+    dataPagamento: e.dataPagamento ? e.dataPagamento : null
+  };
+
+  this.despesasService.atualizar(atualizado).subscribe(() => {
+    this.editando.set(null);
+    this.editandoOriginal.set(null);
+    this.toast.success('Despesa atualizada.');
+    this.reload();
+  });
+}
+
+
+
+  async excluir(d: Despesa): Promise<void> {
+    const ok = await this.confirmService.ask({
+      title: 'Excluir despesa',
+      message: `Deseja excluir "${d.itemNome}" (venc. ${d.dataVencimento})?`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      danger: true
     });
-  }
 
-
-  excluir(d: Despesa): void {
-    if (!confirm(`Excluir "${d.itemNome}" (${d.dataVencimento})?`)) return;
+    if (!ok) return;
 
     this.despesasService.excluir(d.id).subscribe(() => {
-      // se estava editando este item, fecha
       if (this.editando()?.id === d.id) this.editando.set(null);
+      this.toast.success('Despesa excluída.');
       this.reload();
     });
   }
+
 
 
   reload(): void {

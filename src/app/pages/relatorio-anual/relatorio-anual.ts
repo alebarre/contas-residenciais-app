@@ -121,9 +121,9 @@ interface MesResumo {
             <button type="button" class="btn" (click)="exportar('xls')">XLS</button>
           </div>
           <div class="export">
-            <button type="button" class="btn" (click)="exportarDetalhado('xls')">XLS Detalhado</button>
-            <button type="button" class="btn" (click)="exportarDetalhado('pdf')">PDF Detalhado</button>
             <button type="button" class="btn" (click)="exportarDetalhado('txt')">TXT Detalhado</button>
+            <button type="button" class="btn" (click)="exportarDetalhado('pdf')">PDF Detalhado</button>
+            <button type="button" class="btn" (click)="exportarDetalhado('xls')">XLS Detalhado</button>
           </div>
 
         </div>

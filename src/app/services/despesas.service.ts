@@ -28,6 +28,11 @@ export class DespesasService {
     return of(list);
   }
 
+  // ✅ usado no bloqueio de inativação de item
+  existeVinculoComItem(itemId: number): Observable<boolean> {
+    return of(this.despesas.some(d => d.itemId === itemId));
+  }
+
   criar(d: Omit<Despesa, 'id'>): Observable<Despesa> {
     const novo: Despesa = { ...d, id: Date.now() };
     this.despesas.push(novo);

@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { ItensService } from '../../services/itens.service';
 import { Item, ItemTipo } from '../../models/item.model';
 import { DespesasService } from '../../services/despesas.service';
-
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-despesa-form',
@@ -125,7 +125,7 @@ export class DespesaFormComponent {
   private router = inject(Router);
   private itensService = inject(ItensService);
   private despesasService = inject(DespesasService);
-
+  private toast = inject(ToastService);
 
   loading = false;
   success = '';
@@ -178,7 +178,12 @@ export class DespesaFormComponent {
   salvar(): void {
   this.success = '';
   this.error = '';
-  if (this.form.invalid) return;
+  if (this.form.invalid) {
+    this.toast.error('Revise os campos obrigatórios antes de salvar.');
+    this.form.markAllAsTouched();
+    return;
+  }
+
 
   const v = this.form.getRawValue();
 
@@ -192,7 +197,11 @@ export class DespesaFormComponent {
     descricao: v.descricao!,
     bancoPagamento: v.bancoPagamento!,
     valor: Number(v.valor),
-  }).subscribe(() => this.router.navigateByUrl('/app/dashboard'));
-}
+  }).subscribe(() => {
+    this.toast.success('Despesa cadastrada.');
+    this.router.navigateByUrl('/app/dashboard');
+  });
+
+  }
 
 }

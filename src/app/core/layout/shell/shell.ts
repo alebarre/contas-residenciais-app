@@ -1,11 +1,15 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar';
+import { ToastComponent } from '../../../shared/toast/toast.component';
+import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
+
+
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent],
+  imports: [RouterOutlet, SidebarComponent, ToastComponent, ConfirmComponent],
   template: `
     <div class="shell">
       <app-sidebar
@@ -25,6 +29,9 @@ import { SidebarComponent } from '../sidebar/sidebar';
         </section>
       </main>
     </div>
+    <app-toast></app-toast>
+    <app-confirm></app-confirm>
+
   `,
   styles: [`
     .shell { display: flex; min-height: 100vh; background: #fff; }
