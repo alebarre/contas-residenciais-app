@@ -9,14 +9,23 @@ import { ToastService } from '../../services/toast.service';
   template: `
     <div class="toast-stack" aria-live="polite" aria-atomic="true">
       <div class="toast"
-           *ngFor="let t of toastService.toasts()"
-           [class.success]="t.type==='success'"
-           [class.error]="t.type==='error'"
-           [class.info]="t.type==='info'">
+          *ngFor="let t of toastService.toasts()"
+          [class.success]="t.type==='success'"
+          [class.error]="t.type==='error'"
+          [class.info]="t.type==='info'">
+
         <div class="left">
           <div class="title" *ngIf="t.title">{{ t.title }}</div>
           <div class="msg">{{ t.message }}</div>
+
+          <button class="action"
+                  *ngIf="t.action"
+                  type="button"
+                  (click)="t.action.onClick(); toastService.dismiss(t.id)">
+            {{ t.action.label }}
+          </button>
         </div>
+
         <button class="x" type="button" (click)="toastService.dismiss(t.id)">×</button>
       </div>
     </div>
@@ -42,6 +51,17 @@ import { ToastService } from '../../services/toast.service';
       background: #fff;
       box-shadow: 0 10px 25px rgba(0,0,0,.08);
     }
+
+    .action{
+      margin-top: 8px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      padding: 6px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
 
     .toast.success { background: #f0fdf4; border-color: #bbf7d0; }
     .toast.error { background: #fef2f2; border-color: #fecaca; }

@@ -10,6 +10,7 @@ import { ConfirmService } from '../../services/confirm.service';
 import { ToastService } from '../../services/toast.service';
 
 
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -371,6 +372,9 @@ export class DashboardComponent {
   editandoOriginal = signal<Despesa | null>(null);
   erroEdicao = signal<string>('');
 
+  pendenteExclusao = signal<Despesa | null>(null);
+  private undoTimer: number | null = null;
+
   mesLabel = computed(() => {
     const m = this.mes();
     const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -470,25 +474,53 @@ salvarEdicao(): void {
 
 
 
-  async excluir(d: Despesa): Promise<void> {
-    const ok = await this.confirmService.ask({
-      title: 'Excluir despesa',
-      message: `Deseja excluir "${d.itemNome}" (venc. ${d.dataVencimento})?`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
-      danger: true
-    });
+async excluir(d: Despesa): Promise<void> {
+  const ok = await this.confirmService.ask({
+    title: 'Excluir despesa',
+    message: `Deseja excluir "${d.itemNome}" (venc. ${d.dataVencimento})?`,
+    confirmText: 'Excluir',
+    cancelText: 'Cancelar',
+    danger: true
+  });
 
-    if (!ok) return;
+  if (!ok) return;
 
-    this.despesasService.excluir(d.id).subscribe(() => {
-      if (this.editando()?.id === d.id) this.editando.set(null);
-      this.toast.success('Despesa excluída.');
-      this.reload();
-    });
+  // se já havia algo pendente, efetiva antes (evita empilhar undos)
+  const pendente = this.pendenteExclusao();
+  if (pendente) {
+    this.efetivarExclusao(pendente.id);
+    this.limparUndo();
   }
 
+  // remove da lista da UI imediatamente
+  this.despesas.set(this.despesas().filter(x => x.id !== d.id));
 
+  // fecha editor se estava editando a mesma despesa
+  if (this.editando()?.id === d.id) this.editando.set(null);
+
+  // guarda como pendente
+  this.pendenteExclusao.set(d);
+
+  // toast com ação desfazer
+  this.toast.show({
+    type: 'info',
+    title: 'Despesa removida',
+    message: 'Você pode desfazer esta exclusão por alguns segundos.',
+    timeoutMs: 5000,
+    action: {
+      label: 'Desfazer',
+      onClick: () => this.desfazerExclusao()
+    }
+  });
+
+  // timer para efetivar
+  this.undoTimer = window.setTimeout(() => {
+    const p = this.pendenteExclusao();
+    if (!p) return;
+    this.efetivarExclusao(p.id);
+    this.limparUndo();
+  }, 5000);
+}
 
   reload(): void {
     const ano = this.ano();
@@ -501,6 +533,39 @@ salvarEdicao(): void {
         this.resumo.set({ ...r, historicoMensal: hist });
       });
     });
+  }
+
+  /**
+   * Faz parte do "APAGAR TEMPORÁRIO"
+   * Ao excluir uma despesa:
+   * ela sai da lista imediatamente
+   * aparece um toast com “Desfazer” por ~5s
+   * se clicar “Desfazer”, a despesa volta
+   * se não desfizer, a exclusão é persistida
+   * **/
+  private limparUndo(): void {
+    if (this.undoTimer) {
+      window.clearTimeout(this.undoTimer);
+      this.undoTimer = null;
+    }
+    this.pendenteExclusao.set(null);
+  }
+
+  private efetivarExclusao(id: number): void {
+    this.despesasService.excluir(id).subscribe(() => {
+      this.toast.success('Despesa excluída.');
+      this.reload();
+    });
+  }
+
+  desfazerExclusao(): void {
+    const d = this.pendenteExclusao();
+    if (!d) return;
+
+    // volta na lista atual em memória (UI)
+    this.despesas.set([d, ...this.despesas()]);
+    this.toast.info('Exclusão desfeita.');
+    this.limparUndo();
   }
 
 

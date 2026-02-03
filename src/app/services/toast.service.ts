@@ -2,12 +2,18 @@ import { Injectable, signal } from '@angular/core';
 
 export type ToastType = 'success' | 'error' | 'info';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: number;
   type: ToastType;
   title?: string;
   message: string;
   timeoutMs?: number; // default 3500
+  action?: ToastAction; // optional action button
 }
 
 @Injectable({ providedIn: 'root' })
