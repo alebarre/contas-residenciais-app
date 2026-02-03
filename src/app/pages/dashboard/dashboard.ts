@@ -386,7 +386,7 @@ export class DashboardComponent {
   }
 
   novaDespesa(): void {
-    this.router.navigateByUrl('despesas/nova');
+    this.router.navigateByUrl('/app/despesas/nova');
   }
 
   editar(d: Despesa): void {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, forkJoin, map } from 'rxjs';
 import { DashboardResumo } from '../models/dashboard.model';
 import { DespesasService } from './despesas.service';
 
@@ -40,23 +40,15 @@ export class DashboardService {
 
   // ✅ novo método: histórico anual real (12 meses)
   getHistoricoAnual(ano: number): Observable<Array<{ mes: number; total: number }>> {
-    const calls = Array.from({ length: 12 }).map((_, i) => i + 1);
-
-    // Estratégia simples: soma mês a mês
-    return new Observable(sub => {
-      const historico = calls.map(m => ({ mes: m, total: 0 }));
-      let done = 0;
-
-      calls.forEach(mes => {
-        this.despesasService.listarPorMes(ano, mes).subscribe(list => {
-          historico[mes - 1].total = list.reduce((acc, d) => acc + (d.valor ?? 0), 0);
-          done++;
-          if (done === 12) {
-            sub.next(historico);
-            sub.complete();
-          }
-        });
-      });
+    const requests = Array.from({ length: 12 }, (_, i) => {
+      const mes = i + 1;
+      return this.despesasService.listarPorMes(ano, mes).pipe(
+        map(list => list.reduce((acc, d) => acc + (d.valor ?? 0), 0))
+      );
     });
+
+    return forkJoin(requests).pipe(
+      map(totais => totais.map((total, idx) => ({ mes: idx + 1, total })))
+    );
   }
 }
