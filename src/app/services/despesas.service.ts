@@ -1,57 +1,101 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { map, Observable, switchMap } from 'rxjs';
 import { Despesa } from '../models/despesa.model';
-
-const STORAGE_KEY = 'despesas';
+import { DespesasLocalRepository } from '../data/despesas/despesas.local.repository';
 
 @Injectable({ providedIn: 'root' })
 export class DespesasService {
-  private despesas: Despesa[] = this.load();
+  constructor(private repo: DespesasLocalRepository) {}
 
-  private load(): Despesa[] {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }
+  // -----------------------------
+  // API "nova" (fachada)
+  // -----------------------------
 
-  private persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.despesas));
+  listarTodas(): Observable<Despesa[]> {
+    return this.repo.listarTodas().pipe(
+      map(list => this.ordenarPorVencimentoDesc(list))
+    );
   }
 
   listarPorMes(ano: number, mes: number): Observable<Despesa[]> {
-    const mm = String(mes).padStart(2, '0');
-    const prefix = `${ano}-${mm}`;
-
-    const list = this.despesas
-      .filter(d => (d.dataVencimento ?? '').startsWith(prefix))
-      .sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
-
-    return of(list);
+    return this.listarTodas().pipe(
+      map(list => list.filter(d => this.isMesAno(d.dataVencimento, ano, mes)))
+    );
   }
 
-  // ✅ usado no bloqueio de inativação de item
-  existeVinculoComItem(itemId: number): Observable<boolean> {
-    return of(this.despesas.some(d => d.itemId === itemId));
+  salvar(despesa: Despesa): Observable<Despesa> {
+    this.validar(despesa);
+    return this.repo.salvar(despesa);
   }
 
-  criar(d: Omit<Despesa, 'id'>): Observable<Despesa> {
-    const novo: Despesa = { ...d, id: Date.now() };
-    this.despesas.push(novo);
-    this.persist();
-    return of(novo);
+  remover(id: number): Observable<void> {
+    return this.repo.remover(id);
   }
 
-  atualizar(d: Despesa): Observable<Despesa> {
-    const idx = this.despesas.findIndex(x => x.id === d.id);
-    if (idx >= 0) {
-      this.despesas[idx] = { ...d };
-      this.persist();
-    }
-    return of(d);
+  marcarComoPaga(id: number, dataPagamentoISO: string): Observable<Despesa> {
+    return this.repo.listarPorId(id).pipe(
+      map(d => {
+        if (!d) throw new Error('Despesa não encontrada');
+        return { ...d, dataPagamento: dataPagamentoISO };
+      }),
+      switchMap(updated => this.repo.salvar(updated))
+    );
+  }
+
+  desmarcarPagamento(id: number): Observable<Despesa> {
+    return this.repo.listarPorId(id).pipe(
+      map(d => {
+        if (!d) throw new Error('Despesa não encontrada');
+        return { ...d, dataPagamento: undefined };
+      }),
+      switchMap(updated => this.repo.salvar(updated))
+    );
+  }
+
+  // -----------------------------
+  // ✅ Compatibilidade (contrato antigo das telas)
+  // -----------------------------
+
+  criar(despesa: Omit<Despesa, 'id'>): Observable<Despesa> {
+    // garante que é criação (sem id)
+    return this.salvar({ ...(despesa as Despesa), id: 0 });
+  }
+
+  atualizar(despesa: Despesa): Observable<Despesa> {
+    // update exige id
+    if (!despesa.id) throw new Error('Id é obrigatório para atualizar');
+    return this.salvar(despesa);
   }
 
   excluir(id: number): Observable<void> {
-    this.despesas = this.despesas.filter(d => d.id !== id);
-    this.persist();
-    return of(void 0);
+    return this.remover(id);
+  }
+
+  existeVinculoComItem(itemId: number): Observable<boolean> {
+    // regra: existe vínculo se alguma despesa referencia o itemId
+    // Ajuste aqui se o seu model usar outro campo (ex.: itemId, item?.id, etc.)
+    return this.repo.listarTodas().pipe(
+      map(list => list.some(d => d.itemId === itemId))
+    );
+  }
+
+  // -----------------------------
+  // Regras utilitárias
+  // -----------------------------
+
+  private validar(d: Despesa): void {
+    if (!d.descricao?.trim()) throw new Error('Descrição é obrigatória');
+    if (d.valor == null || d.valor <= 0) throw new Error('Valor deve ser maior que zero');
+    if (!d.dataVencimento) throw new Error('Data de vencimento é obrigatória');
+  }
+
+  private isMesAno(dateISO: string, ano: number, mes: number): boolean {
+    // dateISO esperado: yyyy-MM-dd
+    const [y, m] = dateISO.split('-').map(Number);
+    return y === ano && m === mes;
+  }
+
+  private ordenarPorVencimentoDesc(list: Despesa[]): Despesa[] {
+    return [...list].sort((a, b) => (b.dataVencimento ?? '').localeCompare(a.dataVencimento ?? ''));
   }
 }

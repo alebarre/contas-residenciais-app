@@ -230,7 +230,7 @@ export class ItensComponent {
   }
 
   inativar(item: Item): void {
-    this.despesasService.existeVinculoComItem(item.id).subscribe(vinculado => {
+    this.despesasService.existeVinculoComItem(item.id).subscribe((vinculado: boolean) => {
       if (vinculado) {
         this.toastService.error('Não é possível inativar: este item já possui despesas associadas.');
         return;
