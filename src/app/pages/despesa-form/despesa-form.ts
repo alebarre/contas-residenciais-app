@@ -3,9 +3,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ItensService } from '../../services/itens.service';
+import { BancosService } from '../../services/bancos.service';
 import { Item, ItemTipo } from '../../models/item.model';
 import { DespesasService } from '../../services/despesas.service';
 import { ToastService } from '../../services/toast.service';
+import { Banco } from '../../models/banco.model';
 
 @Component({
   selector: 'app-despesa-form',
@@ -55,7 +57,10 @@ import { ToastService } from '../../services/toast.service';
 
           <div class="field">
             <label>Banco de pagamento</label>
-            <input type="text" formControlName="bancoPagamento" placeholder="Ex.: Nubank" />
+            <select formControlName="bancoCode">
+              <option value="">(Sem banco)</option>
+              <option *ngFor="let b of bancosAtivos()" [value]="b.code">{{ b.name }}</option>
+            </select>
           </div>
 
           <div class="field">
@@ -124,6 +129,7 @@ export class DespesaFormComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private itensService = inject(ItensService);
+  private bancosService = inject(BancosService);
   private despesasService = inject(DespesasService);
   private toast = inject(ToastService);
 
@@ -132,6 +138,7 @@ export class DespesaFormComponent {
   error = '';
 
   itens = signal<Item[]>([]);
+  bancosAtivos = signal<Banco[]>([]);
   tipoSig = signal<ItemTipo>('EMPRESA');
 
   form = this.fb.group({
@@ -140,7 +147,7 @@ export class DespesaFormComponent {
     dataVencimento: ['', [Validators.required]],
     dataPagamento: ['', ],
     descricao: ['', [Validators.required, Validators.minLength(3)]],
-    bancoPagamento: ['', [Validators.required, Validators.minLength(2)]],
+    bancoCode: [''],
     valor: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
 
@@ -156,6 +163,11 @@ export class DespesaFormComponent {
   this.itensService.listar().subscribe(list => {
     this.itens.set(list);
     this.syncItemSelection();
+  });
+
+  // bancos (catálogo via API + inativação local)
+  this.bancosService.listarAtivos().subscribe(list => {
+    this.bancosAtivos.set(list);
   });
 
   this.form.controls.tipo.valueChanges.subscribe(v => {
@@ -187,6 +199,11 @@ export class DespesaFormComponent {
 
   const v = this.form.getRawValue();
 
+  const bancoCode = v.bancoCode ? Number(v.bancoCode) : null;
+  const bancoNome = bancoCode
+    ? (this.bancosAtivos().find(b => b.code === bancoCode)?.name ?? '')
+    : '';
+
   this.loading = true;
 
   this.despesasService.criar({
@@ -195,7 +212,8 @@ export class DespesaFormComponent {
     dataVencimento: v.dataVencimento!,
     dataPagamento: v.dataPagamento ? v.dataPagamento : null,
     descricao: v.descricao!,
-    bancoPagamento: v.bancoPagamento!,
+    bancoPagamento: bancoNome,
+    bancoCode,
     valor: Number(v.valor),
   }).subscribe(() => {
     this.toast.success('Despesa cadastrada.');

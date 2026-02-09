@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
+import { BancosService } from '../../services/bancos.service';
+import { Banco } from '../../models/banco.model';
 import { Item, ItemTipo } from '../../models/item.model';
 import { ToastService } from '../../services/toast.service';
 
@@ -13,11 +15,24 @@ import { ToastService } from '../../services/toast.service';
   template: `
     <div class="wrap">
       <div class="header">
-        <h2>Itens</h2>
-        <p class="sub">Empresas, profissionais e serviços</p>
+        <div>
+          <h2>Cadastros</h2>
+          <p class="sub">Itens e bancos (catálogo via API)</p>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab" [class.active]="aba() === 'itens'" (click)="setAba('itens')">
+            Itens
+          </button>
+          <button type="button" class="tab" [class.active]="aba() === 'bancos'" (click)="setAba('bancos')">
+            Bancos
+          </button>
+        </div>
       </div>
 
-      <form class="card" [formGroup]="form" (ngSubmit)="salvar()">
+      <!-- ITENS -->
+      <ng-container *ngIf="aba() === 'itens'">
+        <form class="card" [formGroup]="form" (ngSubmit)="salvar()">
         <div class="row">
           <select formControlName="tipo">
             <option value="EMPRESA">Empresa</option>
@@ -32,9 +47,24 @@ import { ToastService } from '../../services/toast.service';
             {{ editando ? 'Atualizar' : 'Adicionar' }}
           </button>
         </div>
-      </form>
+        </form>
 
-      <div class="list">
+
+
+<div class="search-row">
+  <input
+    type="text"
+    class="input"
+    placeholder="Buscar banco por código, nome ou ISPB..."
+    [value]="bancoBusca()"
+    (input)="bancoBusca.set(($any($event.target).value || '').toString())"
+  />
+  <button type="button" class="btn btn-ghost" (click)="bancoBusca.set('')" [disabled]="!bancoBusca()">
+    Limpar
+  </button>
+  <span class="muted">{{ bancosVisiveis().length }} / {{ bancos().length }}</span>
+</div>
+        <div class="list">
         <table>
           <thead>
             <tr>
@@ -84,12 +114,93 @@ import { ToastService } from '../../services/toast.service';
           Nenhum item cadastrado.
         </div>
       </div>
+      </ng-container>
+
+      <!-- BANCOS -->
+      <ng-container *ngIf="aba() === 'bancos'">
+        <div class="card banks">
+          <div class="banks-head">
+            <div>
+              <h3>Bancos</h3>
+              <p class="sub">Lista carregada automaticamente (1x/dia) e com inativação local.</p>
+            </div>
+            <div class="banks-buttons">
+              <button type="button" class="btn" (click)="atualizarBancos()" [disabled]="bancosLoading()">
+                {{ bancosLoading() ? 'Atualizando...' : 'Atualizar agora' }}
+              </button>
+              <button type="button" class="btn" (click)="ativarTodos()">
+                Ativar todos
+              </button>
+              <button type="button" class="btn" (click)="desativarTodos()">
+                Desativar todos
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+
+<div class="search-row">
+  <input
+    type="text"
+    class="input"
+    placeholder="Buscar banco por código, nome ou ISPB..."
+    [value]="bancoBusca()"
+    (input)="bancoBusca.set(($any($event.target).value || '').toString())"
+  />
+  <button type="button" class="btn btn-ghost" (click)="bancoBusca.set('')" [disabled]="!bancoBusca()">
+    Limpar
+  </button>
+  <span class="muted">{{ bancosVisiveis().length }} / {{ bancos().length }}</span>
+</div>
+        <div class="list">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-bank-code">Código</th>
+                <th class="col-bank-name">Nome</th>
+                <th class="col-status">Status</th>
+                <th class="col-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let b of bancosVisiveis()">
+                <td class="col-bank-code">{{ b.code }}</td>
+                <td class="col-bank-name">{{ b.name }}</td>
+                <td class="col-status">
+                  <span class="pill" [class.off]="isBancoInativo(b)">
+                    {{ isBancoInativo(b) ? 'Inativo' : 'Ativo' }}
+                  </span>
+                </td>
+                <td class="col-acoes">
+                  <button class="btn-sm danger" *ngIf="!isBancoInativo(b)" (click)="inativarBanco(b)">Inativar</button>
+                  <button class="btn-sm" *ngIf="isBancoInativo(b)" (click)="reativarBanco(b)">Reativar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="empty" *ngIf="!bancos().length">
+            Nenhum banco carregado.
+          </div>
+        </div>
+      </ng-container>
     </div>
   `,
   styles: [`
     .wrap { max-width: 980px; margin: 0 auto; }
-    .header { margin-bottom: 12px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
     .sub { color: #6b7280; margin: 0; }
+
+    .tabs { display: inline-flex; gap: 8px; }
+    .tab {
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .tab.active { background: #111827; color: #fff; border-color: #111827; }
 
     .card {
       border: 1px solid #e5e7eb;
@@ -172,22 +283,36 @@ import { ToastService } from '../../services/toast.service';
       border-radius: 10px;
     }
 
+    .banks h3 { margin: 0 0 2px; }
+    .banks-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .banks-buttons { display: flex; gap: 8px; }
+    .col-bank-code { width: 120px; }
+    .col-bank-name { width: auto; }
+
     @media (max-width: 900px) {
       .row { grid-template-columns: 1fr; }
       table { table-layout: auto; }
       .col-acoes { text-align: left; }
       thead .col-acoes { text-align: left; }
       .btn-sm { margin-left: 0; margin-right: 6px; }
+      .header { flex-direction: column; align-items: stretch; }
+      .tabs { justify-content: flex-start; }
+      .banks-head { flex-direction: column; align-items: stretch; }
     }
   `]
 })
 export class ItensComponent {
   private service = inject(ItensService);
   private despesasService = inject(DespesasService);
+  private bancosService = inject(BancosService);
   private fb = inject(FormBuilder);
   private toastService = inject(ToastService);
 
   itens = signal<Item[]>([]);
+  bancos = signal<Banco[]>([]);
+  bancosLoading = signal<boolean>(false);
+  bancoBusca = signal<string>('');
+  aba = signal<'itens' | 'bancos'>('itens');
   editando: Item | null = null;
 
   form = this.fb.group({
@@ -198,10 +323,64 @@ export class ItensComponent {
 
   constructor() {
     this.carregar();
+    this.carregarBancos();
+  }
+
+  setAba(v: 'itens' | 'bancos'): void {
+    this.aba.set(v);
   }
 
   carregar(): void {
     this.service.listar().subscribe(list => this.itens.set(list));
+  }
+
+  carregarBancos(): void {
+    this.bancosService.listarTodos().subscribe(list => this.bancos.set(list));
+  }
+
+  atualizarBancos(): void {
+    this.bancosLoading.set(true);
+    this.bancosService.atualizarAgora().subscribe({
+      next: (list) => {
+        this.bancos.set(list);
+        this.toastService.success('Lista de bancos atualizada.');
+      },
+      error: () => {
+        this.toastService.error('Não foi possível atualizar a lista de bancos.');
+      },
+      complete: () => this.bancosLoading.set(false)
+    });
+  }
+
+
+
+bancosVisiveis(): Banco[] {
+  const q = this.bancoBusca().trim().toLowerCase();
+  if (!q) return this.bancos();
+  return this.bancos().filter(b => {
+    const code = String(b.code ?? '');
+    const name = (b.name ?? '').toLowerCase();
+    const full = (b.fullName ?? '').toLowerCase();
+    const ispb = String((b as any).ispb ?? '');
+    return code.includes(q) || name.includes(q) || full.includes(q) || ispb.includes(q);
+  });
+}
+
+  isBancoInativo(b: Banco): boolean {
+    return this.bancosService.isInativo(b.code);
+  }
+
+  inativarBanco(b: Banco): void {
+    this.bancosService.inativar(b.code);
+    // não precisa recarregar da API; só re-renderizar status
+    this.bancos.set([...this.bancos()]);
+    this.toastService.success('Banco inativado localmente.');
+  }
+
+  reativarBanco(b: Banco): void {
+    this.bancosService.reativar(b.code);
+    this.bancos.set([...this.bancos()]);
+    this.toastService.success('Banco reativado localmente.');
   }
 
   salvar(): void {
@@ -249,6 +428,20 @@ export class ItensComponent {
       this.toastService.success('Item reativado.');
       this.carregar();
     });
+  }
+
+  ativarTodos(): void {
+    const bancos = this.bancos();
+    bancos.forEach(b => this.bancosService.reativar(b.code));
+    this.bancos.set([...bancos]);
+    this.toastService.success('Todos os bancos foram ativados.');
+  }
+
+  desativarTodos(): void {
+    const bancos = this.bancos();
+    bancos.forEach(b => this.bancosService.inativar(b.code));
+    this.bancos.set([...bancos]);
+    this.toastService.success('Todos os bancos foram desativados.');
   }
 
 }

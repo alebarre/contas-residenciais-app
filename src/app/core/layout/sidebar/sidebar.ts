@@ -1,11 +1,14 @@
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faHome, faCalendar, faChartBar, faFileAlt, faSignOutAlt, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, CommonModule, FontAwesomeModule],
   template: `
     <aside class="sidebar" [class.closed]="!open">
       <div class="user">
@@ -16,34 +19,36 @@ import { AuthService } from '../../auth/auth.service';
           <div class="email">{{ userEmail() }}</div>
         </div>
 
-        <button type="button" class="toggle" (click)="toggle.emit()">⇆</button>
+        <button type="button" class="toggle" (click)="toggle.emit()" [title]="open ? 'Recolher' : 'Expandir'">
+          <fa-icon [icon]="faChevronLeft" [flip]="!open ? 'horizontal' : ''"></fa-icon>
+        </button>
       </div>
 
       <nav class="menu">
-        <a routerLink="/app/dashboard" routerLinkActive="active">
-          <span class="icon">🏠</span>
+        <a routerLink="/app/dashboard" routerLinkActive="active" title="Dashboard">
+          <fa-icon [icon]="faHome" class="icon"></fa-icon>
           <span class="label">Dashboard</span>
         </a>
 
-        <a routerLink="/app/relatorio-mensal" routerLinkActive="active">
-          <span class="icon">📅</span>
+        <a routerLink="/app/relatorio-mensal" routerLinkActive="active" title="Relatório Mensal">
+          <fa-icon [icon]="faCalendar" class="icon"></fa-icon>
           <span class="label">Relatório mensal</span>
         </a>
 
-        <a routerLink="/app/relatorio-anual" routerLinkActive="active">
-          <span class="icon">📊</span>
+        <a routerLink="/app/relatorio-anual" routerLinkActive="active" title="Relatório Anual">
+          <fa-icon [icon]="faChartBar" class="icon"></fa-icon>
           <span class="label">Relatório anual</span>
         </a>
 
-        <a routerLink="/app/itens" routerLinkActive="active">
-          <span class="icon">🧾</span>
+        <a routerLink="/app/itens" routerLinkActive="active" title="Itens">
+          <fa-icon [icon]="faFileAlt" class="icon"></fa-icon>
           <span class="label">Itens</span>
         </a>
       </nav>
 
       <div class="footer">
-        <button type="button" class="logout" (click)="logout()">
-          <span class="icon">🚪</span>
+        <button type="button" class="logout" (click)="logout()" title="Sair da aplicação">
+          <fa-icon [icon]="faSignOutAlt" class="icon"></fa-icon>
           <span class="label">Sair</span>
         </button>
       </div>
@@ -187,6 +192,14 @@ export class SidebarComponent {
 
   private auth = inject(AuthService);
   private router = inject(Router);
+
+  // FontAwesome Icons
+  faHome = faHome;
+  faCalendar = faCalendar;
+  faChartBar = faChartBar;
+  faFileAlt = faFileAlt;
+  faSignOutAlt = faSignOutAlt;
+  faChevronLeft = faChevronLeft;
 
   user = computed(() => this.auth.user());
 

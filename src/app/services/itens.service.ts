@@ -1,16 +1,20 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Item, ItemTipo } from '../models/item.model';
-
-const STORAGE_KEY = 'itens';
+import { AppStorageService } from '../data/storage/app-storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class ItensService {
-  private itens: Item[] = this.load();
+  private itens: Item[];
 
-  private load(): Item[] {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+  constructor(private appStorage: AppStorageService) {
+    // garante seed + migração (feito no AppStorageService)
+    this.itens = this.ensureSeed(this.appStorage.getItens());
+    this.persist();
+  }
+
+  private ensureSeed(current: Item[]): Item[] {
+    if (current?.length) return current;
 
     return [
       { id: 1, tipo: 'EMPRESA', nome: 'Light (Luz)', atividade: 'Energia elétrica', ativo: true },
@@ -20,7 +24,13 @@ export class ItensService {
   }
 
   private persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.itens));
+    this.appStorage.setItens(this.itens);
+    // manter lastIds.item coerente
+    const lastIds = this.appStorage.getLastIds();
+    const maxId = this.itens.reduce((m, i) => (i.id > m ? i.id : m), 0);
+    if (maxId > (lastIds.item ?? 0)) {
+      this.appStorage.setLastIds({ ...lastIds, item: maxId });
+    }
   }
 
   listar(): Observable<Item[]> {
@@ -28,8 +38,11 @@ export class ItensService {
   }
 
   criar(tipo: ItemTipo, nome: string, atividade: string): Observable<Item> {
-    const novo: Item = { id: Date.now(), tipo, nome, atividade, ativo: true };
+    const lastIds = this.appStorage.getLastIds();
+    const newId = (lastIds.item ?? 0) + 1;
+    const novo: Item = { id: newId, tipo, nome, atividade, ativo: true };
     this.itens.push(novo);
+    this.appStorage.setLastIds({ ...lastIds, item: newId });
     this.persist();
     return of(novo);
   }

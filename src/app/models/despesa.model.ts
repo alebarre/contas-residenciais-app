@@ -6,5 +6,6 @@ export interface Despesa {
   itemNome: string;
   descricao: string;
   bancoPagamento: string;
+  bancoCode?: number | null; // opcional (não obrigatório)
   valor: number;
 }

@@ -64,7 +64,6 @@ import { ToastService } from '../../services/toast.service';
               [style.height.%]="barHeight(p.total, r.historicoMensal)"
             ></div>
           </div>
-          <div class="muted tiny">Mock visual (vamos trocar por gráfico depois)</div>
         </div>
       </div>
       <div class="card paid">
@@ -81,7 +80,7 @@ import { ToastService } from '../../services/toast.service';
     </section>
 
     <section class="list">
-      
+
       <div class="list-header">
         <h3>Contas cadastradas no mês</h3>
         <div class="muted">{{ despesas().length }} registro(s)</div>
