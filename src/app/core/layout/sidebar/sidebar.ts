@@ -4,6 +4,9 @@ import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faHome, faCalendar, faChartBar, faFileAlt, faSignOutAlt, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../auth/auth.service';
+import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { ProfileService } from '../../../services/profile.service';
+
 
 @Component({
   selector: 'app-sidebar',
@@ -12,7 +15,7 @@ import { AuthService } from '../../auth/auth.service';
   template: `
     <aside class="sidebar" [class.closed]="!open">
       <div class="user">
-        <img class="avatar" [src]="avatarUrl()" alt="avatar" />
+        <img class="avatar" [src]="avatarUrl()" alt="Avatar" />
 
         <div class="meta">
           <div class="name">{{ userName() }}</div>
@@ -20,7 +23,7 @@ import { AuthService } from '../../auth/auth.service';
         </div>
 
         <button type="button" class="toggle" (click)="toggle.emit()" [title]="open ? 'Recolher' : 'Expandir'">
-          <fa-icon [icon]="faChevronLeft" [flip]="!open ? 'horizontal' : ''"></fa-icon>
+          <fa-icon [icon]="faChevronLeft" [flip]="!open ? 'horizontal' : undefined"></fa-icon>
         </button>
       </div>
 
@@ -44,6 +47,12 @@ import { AuthService } from '../../auth/auth.service';
           <fa-icon [icon]="faFileAlt" class="icon"></fa-icon>
           <span class="label">Itens</span>
         </a>
+
+        <a class="nav-item" routerLink="/app/perfil" routerLinkActive="active">
+          <fa-icon [icon]="faUser" class="icon"></fa-icon>
+          <span *ngIf="open">Perfil</span>
+        </a>
+
       </nav>
 
       <div class="footer">
@@ -191,6 +200,7 @@ export class SidebarComponent {
   @Output() toggle = new EventEmitter<void>();
 
   private auth = inject(AuthService);
+  private profile = inject(ProfileService);
   private router = inject(Router);
 
   // FontAwesome Icons
@@ -200,12 +210,18 @@ export class SidebarComponent {
   faFileAlt = faFileAlt;
   faSignOutAlt = faSignOutAlt;
   faChevronLeft = faChevronLeft;
+  faUser = faUser;
 
   user = computed(() => this.auth.user());
 
   userName = computed(() => this.user()?.nome ?? 'Usuário');
   userEmail = computed(() => this.user()?.email ?? '');
-  avatarUrl = computed(() => this.user()?.avatarUrl ?? 'https://i.pravatar.cc/80');
+  avatarUrl = computed(() => {
+    this.profile.rev(); // dependência reativa
+    const u = this.auth.user();
+    return u ? this.profile.getAvatarOrDefault(u) : '';
+  });
+
 
   logout(): void {
     this.auth.logout();

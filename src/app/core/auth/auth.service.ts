@@ -14,8 +14,9 @@ export class AuthService {
   private userSig = signal<User | null>(null);
   private tokenSig = signal<string | null>(null);
 
-  isLoggedIn = computed(() => !!this.tokenSig());
-  user = computed(() => this.userSig());
+  // estado público
+  readonly isLoggedIn = computed(() => !!this.tokenSig());
+  readonly user = this.userSig.asReadonly();
 
   constructor(
     private http: HttpClient,
@@ -30,6 +31,7 @@ export class AuthService {
     return this.http.post<AuthResponse>('/api/auth/login', { email, senha });
   }
 
+  /** Aplica token + user (fonte oficial após login bem-sucedido). */
   applySession(resp: AuthResponse): void {
     this.storage.setToken(resp.token);
     this.storage.setUser(resp.user);
@@ -43,8 +45,36 @@ export class AuthService {
     this.userSig.set(null);
   }
 
-  // helpers (para guard/interceptor)
+  // helpers (para guard/interceptor/serviços)
   getToken(): string | null {
     return this.tokenSig();
+  }
+
+  /** Getter imperativo do usuário logado (útil em serviços). */
+  getUser(): User | null {
+    return this.userSig();
+  }
+
+  /** Setter imperativo (casos raros; normalmente use applySession). */
+  setUser(user: User | null): void {
+    if (user) {
+      this.storage.setUser(user);
+    } else {
+      this.storage.clearAll();
+    }
+    this.userSig.set(user);
+  }
+
+  /**
+   * Atualiza parcialmente o usuário logado (ex.: telefone, avatarUrl),
+   * persistindo no TokenStorage também.
+   */
+  patchUser(patch: Partial<User>): void {
+    const current = this.userSig();
+    if (!current) return;
+
+    const updated: User = { ...current, ...patch };
+    this.storage.setUser(updated);
+    this.userSig.set(updated);
   }
 }

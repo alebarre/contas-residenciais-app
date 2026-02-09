@@ -6,7 +6,7 @@ export const routes: Routes = [
   { path: 'register', loadComponent: () => import('../app/pages/register/register').then(m => m.RegisterComponent) },
   { path: 'forgot-password', loadComponent: () => import('../app/pages/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) },
   { path: 'reset-password', loadComponent: () => import('../app/pages/reset-password/reset-password').then(m => m.ResetPasswordComponent) },
-  
+
   {
     path: 'app',
     canActivate: [authGuard],
@@ -17,6 +17,7 @@ export const routes: Routes = [
       { path: 'despesas/nova', loadComponent: () => import('./pages/despesa-form/despesa-form').then(m => m.DespesaFormComponent) },
       { path: 'relatorio-mensal', loadComponent: () => import('../app/pages/relatorio-mensal/relatorio-mensal').then(m => m.RelatorioMensalComponent) },
       { path: 'relatorio-anual', loadComponent: () => import('../app/pages/relatorio-anual/relatorio-anual').then(m => m.RelatorioAnualComponent) },
+      { path: 'perfil', loadComponent: () => import('../app/pages/perfil/perfil').then(m => m.PerfilComponent) },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ]
   },

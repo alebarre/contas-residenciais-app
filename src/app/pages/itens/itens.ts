@@ -49,21 +49,6 @@ import { ToastService } from '../../services/toast.service';
         </div>
         </form>
 
-
-
-<div class="search-row">
-  <input
-    type="text"
-    class="input"
-    placeholder="Buscar banco por código, nome ou ISPB..."
-    [value]="bancoBusca()"
-    (input)="bancoBusca.set(($any($event.target).value || '').toString())"
-  />
-  <button type="button" class="btn btn-ghost" (click)="bancoBusca.set('')" [disabled]="!bancoBusca()">
-    Limpar
-  </button>
-  <span class="muted">{{ bancosVisiveis().length }} / {{ bancos().length }}</span>
-</div>
         <div class="list">
         <table>
           <thead>
@@ -138,8 +123,6 @@ import { ToastService } from '../../services/toast.service';
           </div>
         </div>
 
-
-
 <div class="search-row">
   <input
     type="text"
@@ -153,6 +136,7 @@ import { ToastService } from '../../services/toast.service';
   </button>
   <span class="muted">{{ bancosVisiveis().length }} / {{ bancos().length }}</span>
 </div>
+
         <div class="list">
           <table>
             <thead>
@@ -352,19 +336,17 @@ export class ItensComponent {
     });
   }
 
-
-
-bancosVisiveis(): Banco[] {
-  const q = this.bancoBusca().trim().toLowerCase();
-  if (!q) return this.bancos();
-  return this.bancos().filter(b => {
-    const code = String(b.code ?? '');
-    const name = (b.name ?? '').toLowerCase();
-    const full = (b.fullName ?? '').toLowerCase();
-    const ispb = String((b as any).ispb ?? '');
-    return code.includes(q) || name.includes(q) || full.includes(q) || ispb.includes(q);
-  });
-}
+  bancosVisiveis(): Banco[] {
+    const q = this.bancoBusca().trim().toLowerCase();
+    if (!q) return this.bancos();
+    return this.bancos().filter(b => {
+      const code = String(b.code ?? '');
+      const name = (b.name ?? '').toLowerCase();
+      const full = (b.fullName ?? '').toLowerCase();
+      const ispb = String((b as any).ispb ?? '');
+      return code.includes(q) || name.includes(q) || full.includes(q) || ispb.includes(q);
+    });
+  }
 
   isBancoInativo(b: Banco): boolean {
     return this.bancosService.isInativo(b.code);
@@ -443,5 +425,4 @@ bancosVisiveis(): Banco[] {
     this.bancos.set([...bancos]);
     this.toastService.success('Todos os bancos foram desativados.');
   }
-
 }

@@ -5,11 +5,11 @@ import { DashboardService } from '../../services/dashboard.service';
 import { DespesasService } from '../../services/despesas.service';
 import { DashboardResumo } from '../../models/dashboard.model';
 import { Despesa } from '../../models/despesa.model';
+import { Banco } from '../../models/banco.model';
 import { FormsModule } from '@angular/forms';
 import { ConfirmService } from '../../services/confirm.service';
 import { ToastService } from '../../services/toast.service';
-
-
+import { BancosService } from '../../services/bancos.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -102,8 +102,14 @@ import { ToastService } from '../../services/toast.service';
             </div>
 
             <div class="field">
-              <label>Banco</label>
-              <input type="text" [(ngModel)]="e.bancoPagamento" />
+              <label>Banco de pagamento</label>
+              <select [(ngModel)]="e.bancoCode" (ngModelChange)="onBancoEditChange($event)">
+                <option [ngValue]="null">(Sem banco)</option>
+                <option *ngFor="let b of bancosSelect()" [ngValue]="b.code">{{ bancoLabel(b) }}</option>
+              </select>
+              <small class="hint" *ngIf="e.bancoCode && isBancoInativoCode(e.bancoCode)">
+                Banco inativo (despesa antiga preservada).
+              </small>
             </div>
 
             <div class="field">
@@ -222,93 +228,33 @@ import { ToastService } from '../../services/toast.service';
       border-radius: 12px;
       padding: 12px;
       background: #fff;
-      min-height: 92px;
     }
-
-    .k { color: #6b7280; font-size: 12px; margin-bottom: 6px; }
-    .v { font-size: 18px; font-weight: 700; }
+    .k { color: #6b7280; font-size: 12px; }
+    .v { font-size: 22px; font-weight: 700; }
     .v.small { font-size: 14px; font-weight: 600; }
-    .muted { color: #6b7280; font-weight: 500; }
-    .tiny { font-size: 12px; font-weight: 500; margin-top: 6px; }
+    .muted { color: #6b7280; font-weight: 500; font-size: 12px; }
 
-    .bars {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 4px;
-      align-items: end;
-      height: 48px;
-      margin-top: 6px;
-    }
-
+    .bars { display: flex; gap: 6px; align-items: flex-end; height: 40px; }
     .bar {
-      width: 100%;
+      width: 10px;
       border-radius: 6px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-      min-height: 4px;
+      background: #111827;
+      opacity: .25;
     }
 
-    .list {
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: #fff;
-      padding: 12px;
-    }
+    .list { margin-top: 12px; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
-    .list-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .edit-card {
+    .table-wrap {
       border: 1px solid #e5e7eb;
       border-radius: 12px;
-      padding: 12px;
+      overflow: hidden;
       background: #fff;
-      margin: 10px 0 12px;
     }
 
-    .edit-title { margin-bottom: 10px; color: #374151; }
-
-    .edit-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .edit-grid .field { display: grid; gap: 6px; }
-    .edit-grid .full { grid-column: 1 / -1; }
-
-    .edit-grid label { font-size: 12px; color: #374151; }
-
-    .edit-grid input {
-      padding: 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-    }
-
-    .edit-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .edit-grid { grid-template-columns: 1fr; }
-      .edit-grid .full { grid-column: auto; }
-    }
-
-
-    h3 { margin: 0; }
-
-    .table-wrap { overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; }
-    table { width: 100%; border-collapse: collapse; min-width: 760px; }
-    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-    thead th { background: #f9fafb; font-size: 12px; color: #374151; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    thead th { background: #f9fafb; text-align: left; }
     .right { text-align: right; }
 
     .btn-sm {
@@ -316,6 +262,7 @@ import { ToastService } from '../../services/toast.service';
       background: #fff;
       padding: 6px 8px;
       border-radius: 10px;
+      cursor: pointer;
       margin-left: 6px;
       white-space: nowrap;
     }
@@ -323,13 +270,47 @@ import { ToastService } from '../../services/toast.service';
     .btn-sm.danger { border-color: #fecaca; }
 
     .empty {
-      padding: 14px;
+      padding: 12px;
       color: #6b7280;
+      text-align: center;
       border: 1px dashed #e5e7eb;
-      border-radius: 10px;
-      background: #fafafa;
+      border-radius: 12px;
+      background: #fff;
     }
 
+    .edit-card {
+      width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      margin-top: 6px;
+    }
+
+    .edit-title { margin-bottom: 10px; }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+
+    label { font-size: 12px; color: #374151; }
+
+    input, select {
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    .hint { color: #6b7280; font-size: 12px; }
+
+    .edit-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
     .edit-error { color: #b91c1c; margin: 8px 0 0; }
 
     @media (max-width: 1300px) {
@@ -348,6 +329,7 @@ export class DashboardComponent {
   private router = inject(Router);
   private dashboardService = inject(DashboardService);
   private despesasService = inject(DespesasService);
+  private bancosService = inject(BancosService);
   private confirmService = inject(ConfirmService);
   private toast = inject(ToastService);
 
@@ -357,6 +339,20 @@ export class DashboardComponent {
 
   resumo = signal<DashboardResumo | null>(null);
   despesas = signal<Despesa[]>([]);
+
+  bancosAll = signal<Banco[]>([]);
+  bancosAtivos = signal<Banco[]>([]);
+
+  bancosSelect = computed(() => {
+    const ativos = this.bancosAtivos();
+    const e = this.editando();
+    const code = e?.bancoCode ?? null;
+    if (code != null && !ativos.some(b => b.code === code)) {
+      const found = this.bancosAll().find(b => b.code === code);
+      if (found) return [found, ...ativos];
+    }
+    return ativos;
+  });
 
   pagas = computed(() => this.despesas().filter(d => !!d.dataPagamento));
   pendentes = computed(() => this.despesas().filter(d => !d.dataPagamento));
@@ -382,6 +378,13 @@ export class DashboardComponent {
 
   constructor() {
     this.reload();
+
+    // bancos (catálogo via API + overrides locais)
+    this.bancosService.listarTodos().subscribe(list => {
+      this.bancosAll.set(list);
+      this.syncBancoNomeFromCode();
+    });
+    this.bancosService.listarAtivos().subscribe(list => this.bancosAtivos.set(list));
   }
 
   novaDespesa(): void {
@@ -393,133 +396,132 @@ export class DashboardComponent {
     const copia = { ...d, dataPagamento: d.dataPagamento ?? null };
     this.editandoOriginal.set({ ...copia }); // guarda original
     this.editando.set(copia);                // edição
+
+    this.syncBancoNomeFromCode();
   }
 
-/* cancelarEdicao - descarta edição com confirmação se houver mudanças.
-e não houver mudanças, descarta diretamente.
-Se não houver edição em andamento, apenas limpa os sinais.
-Exibe toast de informação ao descartar mudanças.
-Retorna uma Promise<void> para aguardar a confirmação do usuário. */
-async cancelarEdicao(): Promise<void> {
-  this.erroEdicao.set('');
+  /* cancelarEdicao - descarta edição com confirmação se houver mudanças.
+  e não houver mudanças, descarta diretamente.
+  Se não houver edição em andamento, apenas limpa os sinais.
+  Exibe toast de informação ao descartar mudanças.
+  Retorna uma Promise<void> para aguardar a confirmação do usuário. */
+  async cancelarEdicao(): Promise<void> {
+    this.erroEdicao.set('');
 
-  const e = this.editando();
-  const o = this.editandoOriginal();
+    const e = this.editando();
+    const o = this.editandoOriginal();
 
-  if (!e || !o) {
-    this.editando.set(null);
-    this.editandoOriginal.set(null);
-    return;
-  }
-
-  const mudou =
-    (e.dataVencimento ?? '') !== (o.dataVencimento ?? '') ||
-    (e.dataPagamento ?? '') !== (o.dataPagamento ?? '') ||
-    (e.bancoPagamento ?? '') !== (o.bancoPagamento ?? '') ||
-    (e.descricao ?? '') !== (o.descricao ?? '') ||
-    Number(e.valor ?? 0) !== Number(o.valor ?? 0);
-
-  if (!mudou) {
-    this.editando.set(null);
-    this.editandoOriginal.set(null);
-    return;
-  }
-
-  const ok = await this.confirmService.ask({
-    title: 'Descartar alterações',
-    message: 'Você fez alterações nesta despesa. Deseja descartar?',
-    confirmText: 'Descartar',
-    cancelText: 'Continuar editando',
-    danger: true
-  });
-
-  if (!ok) return;
-
-  this.editando.set(null);
-  this.editandoOriginal.set(null);
-  this.toast.info('Alterações descartadas.');
-}
-
-
-salvarEdicao(): void {
-  const e = this.editando();
-  const orig = this.editandoOriginal();
-  if (!e || !orig) return;
-
-  this.erroEdicao.set('');
-
-  // vencimento obrigatório
-  if (!e.dataVencimento || !e.dataVencimento.trim()) {
-    this.erroEdicao.set('A data de vencimento é obrigatória.');
-    // restaura o vencimento original
-    e.dataVencimento = orig.dataVencimento;
-    this.editando.set({ ...e });
-    this.toast.error('Informe a data de vencimento para salvar.');
-    return;
-  }
-
-  const atualizado: Despesa = {
-    ...e,
-    dataPagamento: e.dataPagamento ? e.dataPagamento : null
-  };
-
-  this.despesasService.atualizar(atualizado).subscribe(() => {
-    this.editando.set(null);
-    this.editandoOriginal.set(null);
-    this.toast.success('Despesa atualizada.');
-    this.reload();
-  });
-}
-
-
-
-async excluir(d: Despesa): Promise<void> {
-  const ok = await this.confirmService.ask({
-    title: 'Excluir despesa',
-    message: `Deseja excluir "${d.itemNome}" (venc. ${d.dataVencimento})?`,
-    confirmText: 'Excluir',
-    cancelText: 'Cancelar',
-    danger: true
-  });
-
-  if (!ok) return;
-
-  // se já havia algo pendente, efetiva antes (evita empilhar undos)
-  const pendente = this.pendenteExclusao();
-  if (pendente) {
-    this.efetivarExclusao(pendente.id);
-    this.limparUndo();
-  }
-
-  // remove da lista da UI imediatamente
-  this.despesas.set(this.despesas().filter(x => x.id !== d.id));
-
-  // fecha editor se estava editando a mesma despesa
-  if (this.editando()?.id === d.id) this.editando.set(null);
-
-  // guarda como pendente
-  this.pendenteExclusao.set(d);
-
-  // toast com ação desfazer
-  this.toast.show({
-    type: 'info',
-    title: 'Despesa removida',
-    message: 'Você pode desfazer esta exclusão por alguns segundos.',
-    timeoutMs: 5000,
-    action: {
-      label: 'Desfazer',
-      onClick: () => this.desfazerExclusao()
+    if (!e || !o) {
+      this.editando.set(null);
+      this.editandoOriginal.set(null);
+      return;
     }
-  });
 
-  // timer para efetivar
-  this.undoTimer = window.setTimeout(() => {
-    const p = this.pendenteExclusao();
-    if (!p) return;
-    this.efetivarExclusao(p.id);
-    this.limparUndo();
-  }, 5000);
-}
+    const mudou =
+      (e.dataVencimento ?? '') !== (o.dataVencimento ?? '') ||
+      (e.dataPagamento ?? '') !== (o.dataPagamento ?? '') ||
+      (e.bancoPagamento ?? '') !== (o.bancoPagamento ?? '') ||
+      (e.descricao ?? '') !== (o.descricao ?? '') ||
+      Number(e.valor ?? 0) !== Number(o.valor ?? 0);
+
+    if (!mudou) {
+      this.editando.set(null);
+      this.editandoOriginal.set(null);
+      return;
+    }
+
+    const ok = await this.confirmService.ask({
+      title: 'Descartar alterações',
+      message: 'Você fez alterações nesta despesa. Deseja descartar?',
+      confirmText: 'Descartar',
+      cancelText: 'Continuar editando',
+      danger: true
+    });
+
+    if (!ok) return;
+
+    this.editando.set(null);
+    this.editandoOriginal.set(null);
+    this.toast.info('Alterações descartadas.');
+  }
+
+  salvarEdicao(): void {
+    const e = this.editando();
+    const orig = this.editandoOriginal();
+    if (!e || !orig) return;
+
+    this.erroEdicao.set('');
+
+    // vencimento obrigatório
+    if (!e.dataVencimento || !e.dataVencimento.trim()) {
+      this.erroEdicao.set('A data de vencimento é obrigatória.');
+      // restaura o vencimento original
+      e.dataVencimento = orig.dataVencimento;
+      this.editando.set({ ...e });
+      this.toast.error('Informe a data de vencimento para salvar.');
+      return;
+    }
+
+    const atualizado: Despesa = {
+      ...e,
+      dataPagamento: e.dataPagamento ? e.dataPagamento : null
+    };
+
+    this.despesasService.atualizar(atualizado).subscribe(() => {
+      this.editando.set(null);
+      this.editandoOriginal.set(null);
+      this.toast.success('Despesa atualizada.');
+      this.reload();
+    });
+  }
+
+  async excluir(d: Despesa): Promise<void> {
+    const ok = await this.confirmService.ask({
+      title: 'Excluir despesa',
+      message: `Deseja excluir "${d.itemNome}" (venc. ${d.dataVencimento})?`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      danger: true
+    });
+
+    if (!ok) return;
+
+    // se já havia algo pendente, efetiva antes (evita empilhar undos)
+    const pendente = this.pendenteExclusao();
+    if (pendente) {
+      this.efetivarExclusao(pendente.id);
+      this.limparUndo();
+    }
+
+    // remove da lista da UI imediatamente
+    this.despesas.set(this.despesas().filter(x => x.id !== d.id));
+
+    // fecha editor se estava editando a mesma despesa
+    if (this.editando()?.id === d.id) this.editando.set(null);
+
+    // guarda como pendente
+    this.pendenteExclusao.set(d);
+
+    // toast com ação desfazer
+    this.toast.show({
+      type: 'info',
+      title: 'Despesa removida',
+      message: 'Você pode desfazer esta exclusão por alguns segundos.',
+      timeoutMs: 5000,
+      action: {
+        label: 'Desfazer',
+        onClick: () => this.desfazerExclusao()
+      }
+    });
+
+    // timer para efetivar
+    this.undoTimer = window.setTimeout(() => {
+      const p = this.pendenteExclusao();
+      if (!p) return;
+      this.efetivarExclusao(p.id);
+      this.limparUndo();
+    }, 5000);
+  }
 
   reload(): void {
     const ano = this.ano();
@@ -567,6 +569,54 @@ async excluir(d: Despesa): Promise<void> {
     this.limparUndo();
   }
 
+  // ----- bancos (edição no dashboard) -----
+
+  bancoLabel(b: Banco): string {
+    const name = b.name ?? '';
+    return this.bancosService.isInativo(b.code) ? `${name} (inativo)` : name;
+  }
+
+  isBancoInativoCode(code: number | null | undefined): boolean {
+    if (code == null) return false;
+    return this.bancosService.isInativo(code);
+  }
+
+  onBancoEditChange(code: number | null): void {
+    const e = this.editando();
+    if (!e) return;
+
+    e.bancoCode = code;
+
+    if (code == null) {
+      e.bancoPagamento = '';
+    } else {
+      const name = this.bancosAll().find(b => b.code === code)?.name ?? '';
+      e.bancoPagamento = name;
+    }
+
+    // força re-render
+    this.editando.set({ ...e });
+  }
+
+  private syncBancoNomeFromCode(): void {
+    const e = this.editando();
+    if (!e) return;
+
+    const code = e.bancoCode ?? null;
+    if (code == null) {
+      if (e.bancoPagamento) {
+        e.bancoPagamento = '';
+        this.editando.set({ ...e });
+      }
+      return;
+    }
+
+    const name = this.bancosAll().find(b => b.code === code)?.name ?? '';
+    if (name && e.bancoPagamento !== name) {
+      e.bancoPagamento = name;
+      this.editando.set({ ...e });
+    }
+  }
 
   prevMonth(): void {
     let a = this.ano();
