@@ -472,26 +472,6 @@ export class ItensComponent {
 
     this.bancosService.inativar(code).subscribe({
       next: () => {
-        this.bancos.set([...this.bancos()]);
-        this.toastService.success('Banco inativado.');
-      },
-      error: (err) =>
-        this.toastService.error(err?.error?.message ?? 'Não foi possível inativar o banco.'),
-    });
-
-    this.bancosService.inativar(code).subscribe({
-      next: () => {
-        this.bancos.set([...this.bancos()]);
-        this.toastService.success('Banco inativado.');
-      },
-      error: (err) => {
-        this.toastService.error(err?.error?.message ?? 'Não foi possível inativar o banco.');
-      },
-    });
-
-    this.bancosService.inativar(code).subscribe({
-      next: () => {
-        // Recarrega a lista para evitar estados inconsistentes no template
         this.carregarBancos();
         this.toastService.success('Banco inativado.');
       },
