@@ -2,74 +2,118 @@ import { Injectable } from '@angular/core';
 import { Observable, of, map, switchMap, tap, catchError } from 'rxjs';
 import { Banco } from '../models/banco.model';
 import { BancosCatalogApi } from '../data/bancos/bancos-catalog.api';
-import { AppStorageService } from '../data/storage/app-storage.service';
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
 export class BancosService {
-  constructor(private api: BancosCatalogApi, private appStorage: AppStorageService) {}
+  private inactiveCodes: number[] = [];
 
-  /** Catálogo completo (cacheado e atualizado automaticamente se passou de 24h). */
-  listarTodos(): Observable<Banco[]> {
-    return this.getCachedOrFetchIfNeeded().pipe(
-      map(list => [...list].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')))
+  constructor(private api: BancosCatalogApi) {
+    // carrega overrides uma vez para a UI
+    this.api.getOverrides().subscribe({
+      next: (o) => (this.inactiveCodes = o?.inactiveCodes ?? []),
+      error: () => (this.inactiveCodes = [])
+    });
+  }
+
+  listarTodos(q?: string): Observable<Banco[]> {
+    return this.api.list(false, q).pipe(
+      map((list) => (list ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')))
     );
   }
 
-  /** Bancos ativos no app = catálogo - inativos localmente (override). */
-  listarAtivos(): Observable<Banco[]> {
-    return this.listarTodos().pipe(
-      map(list => {
-        const inactive = new Set(this.appStorage.getBanksOverrides().inactiveCodes);
-        return list.filter(b => !inactive.has(b.code));
+  listarAtivos(q?: string): Observable<Banco[]> {
+    return this.api.list(true, q).pipe(
+      map((list) => (list ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')))
+    );
+  }
+
+  atualizarAgora(): Observable<Banco[]> {
+    return this.api.refresh().pipe(
+      switchMap(() => this.listarTodos()),
+      catchError(() => this.listarTodos())
+    );
+  }
+
+  refreshOverrides(): Observable<number[]> {
+    return this.api.getOverrides().pipe(
+      map((o) => o?.inactiveCodes ?? []),
+      tap((list) => (this.inactiveCodes = list)),
+      catchError(() => {
+        this.inactiveCodes = [];
+        return of([]);
       })
     );
   }
 
-  /** Força refresh do catálogo (botão "Atualizar agora"). */
-  atualizarAgora(): Observable<Banco[]> {
-    return this.api.fetchAll().pipe(
-      tap(list => this.setCache(list)),
-      catchError(() => of(this.appStorage.getBanksCache()?.data ?? []))
-    );
-  }
-
-  inativar(code: number): void {
-    const current = this.appStorage.getBanksOverrides().inactiveCodes;
-    const next = Array.from(new Set([...current, code])).sort((a, b) => a - b);
-    this.appStorage.setBanksOverrides({ inactiveCodes: next });
-  }
-
-  reativar(code: number): void {
-    const current = this.appStorage.getBanksOverrides().inactiveCodes;
-    this.appStorage.setBanksOverrides({ inactiveCodes: current.filter(c => c !== code) });
-  }
-
   isInativo(code: number): boolean {
-    return this.appStorage.getBanksOverrides().inactiveCodes.includes(code);
+    return (this.inactiveCodes ?? []).includes(code);
   }
 
-  getByCode(code: number): Observable<Banco | null> {
-    return this.listarTodos().pipe(map(list => list.find(b => b.code === code) ?? null));
-  }
+  inativar(code: number): Observable<void> {
+    const c = Number(code);
+    if (!c || c <= 0) return of(void 0);
 
-  // ---------- internals ----------
-
-  private getCachedOrFetchIfNeeded(): Observable<Banco[]> {
-    const cache = this.appStorage.getBanksCache();
-    if (cache?.data?.length && cache.updatedAt) {
-      const age = Date.now() - Date.parse(cache.updatedAt);
-      if (!Number.isNaN(age) && age < ONE_DAY_MS) return of(cache.data);
-    }
-
-    return this.api.fetchAll().pipe(
-      tap(list => this.setCache(list)),
-      catchError(() => of(cache?.data ?? []))
+    return this.api.inactivate(c).pipe(
+      tap(() => {
+        this.inactiveCodes = Array.from(new Set([...(this.inactiveCodes ?? []), c])).sort((a, b) => a - b);
+      })
     );
   }
 
-  private setCache(list: Banco[]): void {
-    this.appStorage.setBanksCache({ updatedAt: new Date().toISOString(), data: list ?? [] });
+  reativar(code: number): Observable<void> {
+    const c = Number(code);
+    if (!c || c <= 0) return of(void 0);
+
+    return this.api.reactivate(c).pipe(
+      tap(() => {
+        this.inactiveCodes = (this.inactiveCodes ?? []).filter((x) => x !== c);
+      })
+    );
   }
+
+  inativarEmLote(codes: number[]): Observable<void> {
+    const distinct = Array.from(
+      new Set((codes ?? []).map(Number).filter((c) => Number.isFinite(c) && c > 0))
+    );
+    if (distinct.length === 0) return of(void 0);
+
+    return this.api.bulkInactivate(distinct).pipe(
+      tap(() => {
+        this.inactiveCodes = Array.from(new Set([...(this.inactiveCodes ?? []), ...distinct])).sort((a, b) => a - b);
+      })
+    );
+  }
+
+  reativarEmLote(codes: number[]): Observable<void> {
+    const distinct = Array.from(
+      new Set((codes ?? []).map(Number).filter((c) => Number.isFinite(c) && c > 0))
+    );
+    if (distinct.length === 0) return of(void 0);
+
+    return this.api.bulkReactivate(distinct).pipe(
+      tap(() => {
+        const set = new Set(distinct);
+        this.inactiveCodes = (this.inactiveCodes ?? []).filter((c) => !set.has(c));
+      })
+    );
+  }
+
+  inativarTodos(): Observable<void> {
+    return this.api.inactivateAll().pipe(
+      tap(() => {
+        // após inativar tudo, sincroniza overrides (garante UI consistente)
+        this.refreshOverrides().subscribe();
+      })
+    );
+  }
+
+  reativarTodos(): Observable<void> {
+    return this.api.reactivateAll().pipe(
+      tap(() => {
+        this.inactiveCodes = [];
+      })
+    );
+  }
+
+
 }

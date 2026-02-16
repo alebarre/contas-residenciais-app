@@ -3,6 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+
 
 @Component({
   selector: 'app-login',
@@ -60,16 +62,18 @@ export class LoginComponent {
     const { email, senha } = this.form.getRawValue();
     this.loading = true;
 
-    // ✅ enquanto não há backend: simula sucesso
-    // Quando o backend estiver pronto, trocamos por this.auth.login(email!, senha!).subscribe(...)
-    setTimeout(() => {
-      this.auth.applySession({
-        token: 'fake-jwt-token',
-        user: { nome: 'Alexandre', email: email! , avatarUrl: 'https://i.pravatar.cc/80' }
-      });
-
-      this.loading = false;
-      this.router.navigateByUrl('/app/dashboard');
-    }, 300);
+    this.auth.login(email!, senha!).subscribe({
+      next: (resp) => {
+        this.auth.applySession(resp);
+        this.loading = false;
+        this.router.navigateByUrl('/app/dashboard');
+      },
+      error: (err: HttpErrorResponse) => {
+        this.loading = false;
+        // padrão do seu backend: { status, error, message, code, ... }
+        this.error = err.error?.message ?? 'Falha no login';
+      }
+    });
   }
+
 }
