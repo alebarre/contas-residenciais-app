@@ -1,11 +1,13 @@
 export interface Despesa {
-  id: number;
-  dataPagamento?: string | null;  // opcional
-  dataVencimento: string;         // ISO yyyy-MM-dd
-  itemId: number;
+  id: string;                      // UUID
+  dataPagamento?: string | null;    // opcional
+  dataVencimento: string;           // ISO yyyy-MM-dd
+  itemId: string;                   // UUID
   itemNome: string;
   descricao: string;
-  bancoPagamento: string;
-  bancoCode?: number | null; // opcional (não obrigatório)
+
+  bancoPagamento: string;           // resolvido pelo backend (string pronta p/ UI)
+  bancoCode?: number | null;        // opcional (sem banco permitido)
+
   valor: number;
 }

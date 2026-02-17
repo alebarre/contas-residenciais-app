@@ -305,7 +305,10 @@ export class RelatorioAnualComponent {
         // filtro por tipo (opcional)
         const filtrada = this.tipo === 'TODOS'
           ? list
-          : list.filter(d => this.tipoDoItem(d.itemId) === this.tipo);
+          : list.filter(d => {
+              const tipo = this.tipoDoItem(Number(d.itemId));
+              return tipo !== '—' && tipo === this.tipo;
+            });
 
         const pagas = filtrada.filter(d => !!d.dataPagamento);
         const pendentes = filtrada.filter(d => !d.dataPagamento);
@@ -376,7 +379,7 @@ export class RelatorioAnualComponent {
 
     const filtrada = this.tipo === 'TODOS'
       ? all
-      : all.filter(d => this.tipoDoItem(d.itemId) === this.tipo);
+      : all.filter(d => this.tipoDoItem(Number(d.itemId)) === this.tipo);
 
     // ordena por vencimento
     filtrada.sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
@@ -388,9 +391,9 @@ export class RelatorioAnualComponent {
       rows: filtrada.map(d => ([
         d.dataVencimento,
         d.dataPagamento || '',
-        this.tipoDoItem(d.itemId),
+        this.tipoDoItem(Number(d.itemId)),
         d.itemNome,
-        this.itens().find(i => i.id === d.itemId)?.atividade ?? '—',
+        this.itens().find(i => i.id === Number(d.itemId))?.atividade ?? '—',
         d.descricao,
         d.bancoPagamento,
         Number(d.valor ?? 0).toFixed(2),

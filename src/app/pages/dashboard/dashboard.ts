@@ -552,7 +552,7 @@ export class DashboardComponent {
     this.pendenteExclusao.set(null);
   }
 
-  private efetivarExclusao(id: number): void {
+  private efetivarExclusao(id: string): void {
     this.despesasService.excluir(id).subscribe(() => {
       this.toast.success('Despesa excluída.');
       this.reload();

@@ -88,8 +88,21 @@ import { forkJoin } from 'rxjs';
                 </td>
 
                 <td class="col-acoes">
-                  <button class="btn-sm" (click)="editar(item)" [disabled]="!item.ativo">
+                  <button class="btn-sm" (click)="editarItem(item.id.toString(), { tipo: item.tipo, nome: item.nome, atividade: item.atividade })" [disabled]="!item.ativo">
                     Editar
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    *ngIf="item.ativo"
+                    (click)="inativarItem(item)">
+                    Inativar
+                  </button>
+
+                  <button
+                    class="btn btn-sm btn-outline-success"
+                    *ngIf="!item.ativo"
+                    (click)="ativarItem(item)">
+                    Ativar
                   </button>
                 </td>
               </tr>
@@ -503,14 +516,14 @@ export class ItensComponent {
     if (!tipo || !nome || !atividade) return;
 
     if (this.editando) {
-      this.service.atualizar({ ...this.editando, tipo, nome, atividade }).subscribe(() => {
+      this.service.atualizar(this.editando.id.toString(), { tipo, nome, atividade }).subscribe(() => {
         this.toastService.success('Item atualizado.');
         this.editando = null;
         this.form.reset({ tipo: 'EMPRESA', nome: '', atividade: '' });
         this.carregar();
       });
     } else {
-      this.service.criar(tipo, nome, atividade).subscribe(() => {
+      this.service.criar(tipo, nome, atividade, { tipo, nome, atividade }).subscribe(() => {
         this.toastService.success('Item criado.');
         this.form.reset({ tipo: 'EMPRESA', nome: '', atividade: '' });
         this.carregar();
@@ -518,32 +531,42 @@ export class ItensComponent {
     }
   }
 
-  editar(item: Item): void {
-    this.editando = item;
-    this.form.setValue({ tipo: item.tipo, nome: item.nome, atividade: item.atividade });
-  }
-
-  inativar(item: Item): void {
-    this.despesasService.existeVinculoComItem(item.id).subscribe((vinculado: boolean) => {
-      if (vinculado) {
-        this.toastService.error(
-          'Não é possível inativar: este item já possui despesas associadas.',
-        );
-        return;
-      }
-
-      this.service.inativar(item.id).subscribe(() => {
-        if (this.editando?.id === item.id) this.editando = null;
-        this.toastService.success('Item inativado.');
-        this.carregar();
-      });
+  editarItem(id: string, payload: Partial<{ tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO'; nome: string; atividade: string }>): void {
+    this.service.atualizar(id, payload).subscribe({
+      next: (updated) => {
+        const list = this.itens().map((x) => (x.id === updated.id ? updated : x));
+        this.itens.set(list);
+        this.toastService.success('Item atualizado.');
+      },
+      error: (err) => this.toastService.error(err?.error?.message ?? 'Não foi possível atualizar o item.')
     });
   }
 
-  ativar(item: Item): void {
-    this.service.ativar(item.id).subscribe(() => {
-      this.toastService.success('Item reativado.');
-      this.carregar();
+  ativarItem(item: Item): void {
+    this.service.ativar(item.id.toString()).subscribe({
+      next: (updated) => {
+        this.itens.set(this.itens().map(x => x.id === updated.id ? updated : x));
+        this.toastService.success('Item ativado.');
+      },
+      error: (err) => {
+        this.toastService.error(err?.error?.message ?? 'Não foi possível ativar o item.');
+      }
+    });
+  }
+
+  inativarItem(item: Item): void {
+    this.service.inativar(item.id.toString()).subscribe({
+      next: (updated) => {
+        this.itens.set(this.itens().map(x => x.id === updated.id ? updated : x));
+        this.toastService.success('Item inativado.');
+      },
+      error: (err) => {
+        if (err?.status === 409 && err?.error?.code === 'ITEM_HAS_EXPENSES') {
+          this.toastService.error('Não é possível inativar: existe despesa vinculada.');
+          return;
+        }
+        this.toastService.error(err?.error?.message ?? 'Não foi possível inativar o item.');
+      }
     });
   }
 
@@ -566,5 +589,16 @@ export class ItensComponent {
       error: (err) => this.toastService.error(err?.error?.message ?? 'Falha ao ativar todos os bancos.')
     });
   }
+
+  criarItem(payload: { tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO'; nome: string; atividade: string }): void {
+    this.service.criar(payload.tipo, payload.nome, payload.atividade, payload).subscribe({
+      next: (created) => {
+        this.itens.set([created, ...this.itens()]);
+        this.toastService.success('Item criado.');
+      },
+      error: (err) => this.toastService.error(err?.error?.message ?? 'Não foi possível criar o item.')
+    });
+  }
+
 
 }

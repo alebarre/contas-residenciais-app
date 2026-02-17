@@ -277,12 +277,12 @@ export class RelatorioMensalComponent {
     this.filtradas.set(byTipo);
   }
 
-  tipoDoItem(itemId: number): ItemTipo | '—' {
-    return this.itens().find(i => i.id === itemId)?.tipo ?? '—';
+  tipoDoItem(itemId: number | string): ItemTipo | '—' {
+    return this.itens().find(i => i.id === Number(itemId))?.tipo ?? '—';
   }
 
-  atividadeDoItem(itemId: number): string {
-    return this.itens().find(i => i.id === itemId)?.atividade ?? '—';
+  atividadeDoItem(itemId: number | string): string {
+    return this.itens().find(i => i.id === Number(itemId))?.atividade ?? '—';
   }
 
   exportar(formato: 'txt' | 'pdf' | 'xls'): void {

@@ -5,5 +5,5 @@ export interface DespesasRepository {
   listarTodas(): Observable<Despesa[]>;
   listarPorId(id: number): Observable<Despesa | null>;
   salvar(despesa: Despesa): Observable<Despesa>;         // cria ou atualiza
-  remover(id: number): Observable<void>;
+  remover(id: string): Observable<void>;
 }

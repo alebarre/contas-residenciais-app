@@ -1,101 +1,78 @@
 import { Injectable } from '@angular/core';
-import { map, Observable, switchMap } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
 import { Despesa } from '../models/despesa.model';
-import { DespesasLocalRepository } from '../data/despesas/despesas.local.repository';
+
+type YearMonth = string; // 'YYYY-MM'
 
 @Injectable({ providedIn: 'root' })
 export class DespesasService {
-  constructor(private repo: DespesasLocalRepository) {}
+  constructor(private http: HttpClient) {}
 
   // -----------------------------
-  // API "nova" (fachada)
+  // Helpers
   // -----------------------------
-
-  listarTodas(): Observable<Despesa[]> {
-    return this.repo.listarTodas().pipe(
-      map(list => this.ordenarPorVencimentoDesc(list))
-    );
+  private toYearMonth(ano: number, mes: number): YearMonth {
+    const mm = String(mes).padStart(2, '0');
+    return `${ano}-${mm}`;
   }
 
+  // -----------------------------
+  // API (backend)
+  // -----------------------------
+
+  /** Lista despesas do mês (usado no Dashboard) */
   listarPorMes(ano: number, mes: number): Observable<Despesa[]> {
-    return this.listarTodas().pipe(
-      map(list => list.filter(d => this.isMesAno(d.dataVencimento, ano, mes)))
+    const ym = this.toYearMonth(ano, mes);
+    const params = new HttpParams().set('month', ym);
+    return this.http.get<Despesa[]>('/api/expenses', { params }).pipe(
+      map((list) => list ?? [])
     );
   }
 
-  salvar(despesa: Despesa): Observable<Despesa> {
-    this.validar(despesa);
-    return this.repo.salvar(despesa);
-  }
-
-  remover(id: number): Observable<void> {
-    return this.repo.remover(id);
-  }
-
-  marcarComoPaga(id: number, dataPagamentoISO: string): Observable<Despesa> {
-    return this.repo.listarPorId(id).pipe(
-      map(d => {
-        if (!d) throw new Error('Despesa não encontrada');
-        return { ...d, dataPagamento: dataPagamentoISO };
-      }),
-      switchMap(updated => this.repo.salvar(updated))
+  /** Alternativa direta caso alguma tela já use yyyyMm */
+  listarMes(yyyyMm: string): Observable<Despesa[]> {
+    const params = new HttpParams().set('month', yyyyMm);
+    return this.http.get<Despesa[]>('/api/expenses', { params }).pipe(
+      map((list) => list ?? [])
     );
   }
 
-  desmarcarPagamento(id: number): Observable<Despesa> {
-    return this.repo.listarPorId(id).pipe(
-      map(d => {
-        if (!d) throw new Error('Despesa não encontrada');
-        return { ...d, dataPagamento: undefined };
-      }),
-      switchMap(updated => this.repo.salvar(updated))
-    );
+  /** Criação (tela /app/despesas/nova) */
+  criar(payload: Omit<Despesa, 'id'>): Observable<Despesa> {
+    this.validar(payload as Despesa);
+    return this.http.post<Despesa>('/api/expenses', payload);
   }
 
-  // -----------------------------
-  // ✅ Compatibilidade (contrato antigo das telas)
-  // -----------------------------
-
-  criar(despesa: Omit<Despesa, 'id'>): Observable<Despesa> {
-    // garante que é criação (sem id)
-    return this.salvar({ ...(despesa as Despesa), id: 0 });
-  }
-
+  /** Atualização (Dashboard edit inline) */
   atualizar(despesa: Despesa): Observable<Despesa> {
-    // update exige id
-    if (!despesa.id) throw new Error('Id é obrigatório para atualizar');
-    return this.salvar(despesa);
+    if (!despesa?.id) throw new Error('Id é obrigatório para atualizar');
+    this.validar(despesa);
+
+    // payload “de atualização” (mantém compatível com backend; inclui bancoCode opcional)
+    const body = {
+      dataVencimento: despesa.dataVencimento,
+      dataPagamento: despesa.dataPagamento ?? null,
+      bancoCode: despesa.bancoCode ?? null,
+      valor: despesa.valor,
+      descricao: despesa.descricao ?? ''
+    };
+
+    return this.http.patch<Despesa>(`/api/expenses/${despesa.id}`, body);
   }
 
-  excluir(id: number): Observable<void> {
-    return this.remover(id);
-  }
-
-  existeVinculoComItem(itemId: number): Observable<boolean> {
-    // regra: existe vínculo se alguma despesa referencia o itemId
-    // Ajuste aqui se o seu model usar outro campo (ex.: itemId, item?.id, etc.)
-    return this.repo.listarTodas().pipe(
-      map(list => list.some(d => d.itemId === itemId))
-    );
+  /** Exclusão efetiva (o undo é no front) */
+  excluir(id: string): Observable<void> {
+    if (!id) throw new Error('Id é obrigatório para excluir');
+    return this.http.delete<void>(`/api/expenses/${id}`);
   }
 
   // -----------------------------
-  // Regras utilitárias
+  // Regras utilitárias (client-side)
   // -----------------------------
-
   private validar(d: Despesa): void {
     if (!d.descricao?.trim()) throw new Error('Descrição é obrigatória');
-    if (d.valor == null || d.valor <= 0) throw new Error('Valor deve ser maior que zero');
+    if (d.valor == null || Number(d.valor) <= 0) throw new Error('Valor deve ser maior que zero');
     if (!d.dataVencimento) throw new Error('Data de vencimento é obrigatória');
-  }
-
-  private isMesAno(dateISO: string, ano: number, mes: number): boolean {
-    // dateISO esperado: yyyy-MM-dd
-    const [y, m] = dateISO.split('-').map(Number);
-    return y === ano && m === mes;
-  }
-
-  private ordenarPorVencimentoDesc(list: Despesa[]): Despesa[] {
-    return [...list].sort((a, b) => (b.dataVencimento ?? '').localeCompare(a.dataVencimento ?? ''));
   }
 }

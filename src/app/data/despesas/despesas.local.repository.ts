@@ -15,7 +15,7 @@ export class DespesasLocalRepository implements DespesasRepository {
 
   listarPorId(id: number): Observable<Despesa | null> {
     const all = this.appStorage.getAll();
-    const found = (all.despesas ?? []).find(d => d.id === id) ?? null;
+    const found = (all.despesas ?? []).find(d => d.id === id.toString()) ?? null;
     return of(found);
   }
 
@@ -27,7 +27,7 @@ export class DespesasLocalRepository implements DespesasRepository {
     // create
     if (!despesa.id) {
       const newId = (lastIds.despesa ?? 0) + 1;
-      const created: Despesa = { ...despesa, id: newId };
+      const created: Despesa = { ...despesa, id: newId.toString() };
       lastIds.despesa = newId;
       const next = [created, ...despesas];
       this.appStorage.setDespesas(next);
@@ -41,7 +41,7 @@ export class DespesasLocalRepository implements DespesasRepository {
     return of({ ...despesa });
   }
 
-  remover(id: number): Observable<void> {
+  remover(id: string): Observable<void> {
     const all = this.appStorage.getAll();
     const next = (all.despesas ?? []).filter(d => d.id !== id);
     this.appStorage.setDespesas(next);

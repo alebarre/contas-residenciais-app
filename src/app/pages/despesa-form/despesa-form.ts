@@ -207,7 +207,7 @@ export class DespesaFormComponent {
   this.loading = true;
 
   this.despesasService.criar({
-    itemId: Number(v.itemId),
+    itemId: v.itemId!,
     itemNome: this.itens().find(i => i.id === Number(v.itemId))?.nome ?? '',
     dataVencimento: v.dataVencimento!,
     dataPagamento: v.dataPagamento ? v.dataPagamento : null,
