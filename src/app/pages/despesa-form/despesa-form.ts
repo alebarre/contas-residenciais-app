@@ -32,6 +32,7 @@ import { Banco } from '../../models/banco.model';
               <option value="EMPRESA">Empresa</option>
               <option value="PROFISSIONAL">Profissional</option>
               <option value="SERVICO">Serviço</option>
+              <option value="DESPESA">Despesa</option>
             </select>
           </div>
 
@@ -145,7 +146,7 @@ export class DespesaFormComponent {
     tipo: ['EMPRESA' as ItemTipo, [Validators.required]],
     itemId: ['', [Validators.required]],
     dataVencimento: ['', [Validators.required]],
-    dataPagamento: ['', ],
+    dataPagamento: [''],
     descricao: ['', [Validators.required, Validators.minLength(3)]],
     bancoCode: [''],
     valor: [null as number | null, [Validators.required, Validators.min(0.01)]],
@@ -157,24 +158,24 @@ export class DespesaFormComponent {
   });
 
   constructor() {
-  // valor inicial do form -> signal
-  this.tipoSig.set(this.form.controls.tipo.value as ItemTipo);
+    // valor inicial do form -> signal
+    this.tipoSig.set(this.form.controls.tipo.value as ItemTipo);
 
-  this.itensService.listar().subscribe(list => {
-    this.itens.set(list);
-    this.syncItemSelection();
-  });
+    this.itensService.listar().subscribe(list => {
+      this.itens.set(list);
+      this.syncItemSelection();
+    });
 
-  // bancos (catálogo via API + inativação local)
-  this.bancosService.listarAtivos().subscribe(list => {
-    this.bancosAtivos.set(list);
-  });
+    // bancos (catálogo via API + inativação por usuário)
+    this.bancosService.listarAtivos().subscribe(list => {
+      this.bancosAtivos.set(list);
+    });
 
-  this.form.controls.tipo.valueChanges.subscribe(v => {
-    this.tipoSig.set(v as ItemTipo);     // Faz computed recalcular
-    this.syncItemSelection();            // limpa itemId se não for do tipo
-  });
-}
+    this.form.controls.tipo.valueChanges.subscribe(v => {
+      this.tipoSig.set(v as ItemTipo);
+      this.syncItemSelection();
+    });
+  }
 
   private syncItemSelection(): void {
     const current = this.form.controls.itemId.value;
@@ -188,38 +189,38 @@ export class DespesaFormComponent {
   }
 
   salvar(): void {
-  this.success = '';
-  this.error = '';
-  if (this.form.invalid) {
-    this.toast.error('Revise os campos obrigatórios antes de salvar.');
-    this.form.markAllAsTouched();
-    return;
+    this.success = '';
+    this.error = '';
+
+    if (this.form.invalid) {
+      this.toast.error('Revise os campos obrigatórios antes de salvar.');
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const v = this.form.getRawValue();
+    const bancoCode = v.bancoCode ? Number(v.bancoCode) : null;
+
+    this.loading = true;
+
+    // ✅ Payload de criação alinhado ao backend:
+    // backend resolve itemNome e bancoPagamento no retorno
+    this.despesasService.criar({
+      itemId: v.itemId!,
+      dataVencimento: v.dataVencimento!,
+      dataPagamento: v.dataPagamento ? v.dataPagamento : null,
+      descricao: v.descricao!,
+      bancoCode,
+      valor: Number(v.valor),
+    }).subscribe({
+      next: () => {
+        this.toast.success('Despesa cadastrada.');
+        this.router.navigateByUrl('/app/dashboard');
+      },
+      error: (err) => {
+        this.loading = false;
+        this.toast.error(err?.error?.message ?? 'Não foi possível cadastrar a despesa.');
+      }
+    });
   }
-
-
-  const v = this.form.getRawValue();
-
-  const bancoCode = v.bancoCode ? Number(v.bancoCode) : null;
-  const bancoNome = bancoCode
-    ? (this.bancosAtivos().find(b => b.code === bancoCode)?.name ?? '')
-    : '';
-
-  this.loading = true;
-
-  this.despesasService.criar({
-    itemId: v.itemId!,
-    itemNome: this.itens().find(i => i.id === Number(v.itemId))?.nome ?? '',
-    dataVencimento: v.dataVencimento!,
-    dataPagamento: v.dataPagamento ? v.dataPagamento : null,
-    descricao: v.descricao!,
-    bancoPagamento: bancoNome,
-    bancoCode,
-    valor: Number(v.valor),
-  }).subscribe(() => {
-    this.toast.success('Despesa cadastrada.');
-    this.router.navigateByUrl('/app/dashboard');
-  });
-
-  }
-
 }

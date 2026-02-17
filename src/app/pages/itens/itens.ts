@@ -49,6 +49,7 @@ import { forkJoin } from 'rxjs';
               <option value="EMPRESA">Empresa</option>
               <option value="PROFISSIONAL">Profissional</option>
               <option value="SERVICO">Serviço</option>
+              <option value="DESPESA">Despesa</option>
             </select>
 
             <input type="text" formControlName="nome" placeholder="Nome do item" />
@@ -88,7 +89,7 @@ import { forkJoin } from 'rxjs';
                 </td>
 
                 <td class="col-acoes">
-                  <button class="btn-sm" (click)="editarItem(item.id.toString(), { tipo: item.tipo, nome: item.nome, atividade: item.atividade })" [disabled]="!item.ativo">
+                  <button class="btn-sm" (click)="iniciarEdicao(item)" [disabled]="!item.ativo">
                     Editar
                   </button>
                   <button
@@ -405,7 +406,6 @@ import { forkJoin } from 'rxjs';
 })
 export class ItensComponent {
   private service = inject(ItensService);
-  private despesasService = inject(DespesasService);
   public bancosService = inject(BancosService);
   private fb = inject(FormBuilder);
   private toastService = inject(ToastService);
@@ -516,7 +516,7 @@ export class ItensComponent {
     if (!tipo || !nome || !atividade) return;
 
     if (this.editando) {
-      this.service.atualizar(this.editando.id.toString(), { tipo, nome, atividade }).subscribe(() => {
+      this.service.atualizar(this.editando.id.toString(), { tipo: tipo as ItemTipo | undefined, nome, atividade }).subscribe(() => {
         this.toastService.success('Item atualizado.');
         this.editando = null;
         this.form.reset({ tipo: 'EMPRESA', nome: '', atividade: '' });
@@ -531,7 +531,26 @@ export class ItensComponent {
     }
   }
 
-  editarItem(id: string, payload: Partial<{ tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO'; nome: string; atividade: string }>): void {
+  iniciarEdicao(item: Item): void {
+    this.editando = item;
+
+    this.form.reset({
+      tipo: item.tipo,
+      nome: item.nome,
+      atividade: item.atividade,
+    });
+
+    // opcional: levar o usuário pro topo onde está o form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  cancelarEdicao(): void {
+    this.editando = null;
+    this.form.reset({ tipo: 'EMPRESA', nome: '', atividade: '' });
+  }
+
+
+  editarItem(id: string, payload: Partial<{ tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO' | 'DESPESA'; nome: string; atividade: string }>): void {
     this.service.atualizar(id, payload).subscribe({
       next: (updated) => {
         const list = this.itens().map((x) => (x.id === updated.id ? updated : x));
@@ -590,7 +609,7 @@ export class ItensComponent {
     });
   }
 
-  criarItem(payload: { tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO'; nome: string; atividade: string }): void {
+  criarItem(payload: { tipo: 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO' | 'DESPESA'; nome: string; atividade: string }): void {
     this.service.criar(payload.tipo, payload.nome, payload.atividade, payload).subscribe({
       next: (created) => {
         this.itens.set([created, ...this.itens()]);

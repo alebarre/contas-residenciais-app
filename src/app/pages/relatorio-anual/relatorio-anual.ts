@@ -43,6 +43,7 @@ interface MesResumo {
             <option value="EMPRESA">Empresa</option>
             <option value="PROFISSIONAL">Profissional</option>
             <option value="SERVICO">Serviço</option>
+            <option value="DESPESA">Despesa</option>
           </select>
         </div>
       </div>
@@ -306,7 +307,7 @@ export class RelatorioAnualComponent {
         const filtrada = this.tipo === 'TODOS'
           ? list
           : list.filter(d => {
-              const tipo = this.tipoDoItem(Number(d.itemId));
+              const tipo = this.tipoDoItem(d.itemId);
               return tipo !== '—' && tipo === this.tipo;
             });
 
@@ -331,8 +332,8 @@ export class RelatorioAnualComponent {
     });
   }
 
-  tipoDoItem(itemId: number): ItemTipo | '—' {
-    return this.itens().find(i => i.id === itemId)?.tipo ?? '—';
+  tipoDoItem(itemId: string): ItemTipo | '—' {
+    return this.itens().find(i => i.id === Number(itemId))?.tipo ?? '—';
   }
 
   mesLabel(m: number): string {
@@ -379,7 +380,7 @@ export class RelatorioAnualComponent {
 
     const filtrada = this.tipo === 'TODOS'
       ? all
-      : all.filter(d => this.tipoDoItem(Number(d.itemId)) === this.tipo);
+      : all.filter(d => this.tipoDoItem(d.itemId) === this.tipo);
 
     // ordena por vencimento
     filtrada.sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
@@ -391,7 +392,7 @@ export class RelatorioAnualComponent {
       rows: filtrada.map(d => ([
         d.dataVencimento,
         d.dataPagamento || '',
-        this.tipoDoItem(Number(d.itemId)),
+        this.tipoDoItem(d.itemId),
         d.itemNome,
         this.itens().find(i => i.id === Number(d.itemId))?.atividade ?? '—',
         d.descricao,

@@ -1,4 +1,4 @@
-export type ItemTipo = 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO';
+export type ItemTipo = 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO' | 'DESPESA';
 
 export interface Item {
   id: number;

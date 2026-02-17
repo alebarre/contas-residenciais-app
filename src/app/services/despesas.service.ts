@@ -9,6 +9,30 @@ type YearMonth = string; // 'YYYY-MM'
 export class DespesasService {
   constructor(private http: HttpClient) {}
 
+  // DTO de criação (backend resolve itemNome/bancoPagamento)
+  // itemId é UUID
+  criar(payload: {
+    itemId: string;
+    dataVencimento: string;
+    dataPagamento?: string | null;
+    descricao: string;
+    bancoCode?: number | null;
+    valor: number;
+  }): Observable<Despesa> {
+    this.validarCriacao(payload);
+
+    const body = {
+      itemId: payload.itemId,
+      dataVencimento: payload.dataVencimento,
+      dataPagamento: payload.dataPagamento ?? null,
+      descricao: payload.descricao ?? '',
+      bancoCode: payload.bancoCode ?? null,
+      valor: Number(payload.valor)
+    };
+
+    return this.http.post<Despesa>('/api/expenses', body);
+  }
+
   // -----------------------------
   // Helpers
   // -----------------------------
@@ -38,18 +62,11 @@ export class DespesasService {
     );
   }
 
-  /** Criação (tela /app/despesas/nova) */
-  criar(payload: Omit<Despesa, 'id'>): Observable<Despesa> {
-    this.validar(payload as Despesa);
-    return this.http.post<Despesa>('/api/expenses', payload);
-  }
-
   /** Atualização (Dashboard edit inline) */
   atualizar(despesa: Despesa): Observable<Despesa> {
     if (!despesa?.id) throw new Error('Id é obrigatório para atualizar');
     this.validar(despesa);
 
-    // payload “de atualização” (mantém compatível com backend; inclui bancoCode opcional)
     const body = {
       dataVencimento: despesa.dataVencimento,
       dataPagamento: despesa.dataPagamento ?? null,
@@ -71,6 +88,20 @@ export class DespesasService {
   // Regras utilitárias (client-side)
   // -----------------------------
   private validar(d: Despesa): void {
+    if (!d.descricao?.trim()) throw new Error('Descrição é obrigatória');
+    if (d.valor == null || Number(d.valor) <= 0) throw new Error('Valor deve ser maior que zero');
+    if (!d.dataVencimento) throw new Error('Data de vencimento é obrigatória');
+  }
+
+  private validarCriacao(d: {
+    itemId: string;
+    dataVencimento: string;
+    dataPagamento?: string | null;
+    descricao: string;
+    bancoCode?: number | null;
+    valor: number;
+  }): void {
+    if (!d.itemId?.trim()) throw new Error('Item é obrigatório');
     if (!d.descricao?.trim()) throw new Error('Descrição é obrigatória');
     if (d.valor == null || Number(d.valor) <= 0) throw new Error('Valor deve ser maior que zero');
     if (!d.dataVencimento) throw new Error('Data de vencimento é obrigatória');

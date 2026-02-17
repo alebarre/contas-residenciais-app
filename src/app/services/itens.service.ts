@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Item } from '../models/item.model';
-
-export type ItemTipo = 'EMPRESA' | 'PROFISSIONAL' | 'SERVICO';
+import { ItemTipo } from '../models/item.model';
 
 @Injectable({ providedIn: 'root' })
 export class ItensService {
