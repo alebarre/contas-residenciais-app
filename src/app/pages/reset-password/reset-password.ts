@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
@@ -11,32 +11,39 @@ import { HttpClient } from '@angular/common/http';
   template: `
     <div class="card">
       <h2>Redefinir senha</h2>
+      <p class="sub">Informe o email, o código recebido e a nova senha.</p>
 
-      <p class="sub" *ngIf="!token()">
-        Token ausente. Abra o link recebido por email novamente.
-      </p>
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <label>Email</label>
+        <input type="email" formControlName="email" />
 
-      <form *ngIf="token()" [formGroup]="form" (ngSubmit)="submit()">
+        <label>Código recebido por email</label>
+        <input type="text" formControlName="code" />
+
+        <small class="hint error"
+               *ngIf="form.controls.code.touched && form.controls.code.invalid">
+          Informe o código recebido por email.
+        </small>
+
         <label>Nova senha</label>
         <input type="password" formControlName="novaSenha" />
-        <small class="hint" *ngIf="form.controls.novaSenha.touched && form.controls.novaSenha.invalid">
-          Senha com no mínimo 6 chars.
-        </small>
 
         <label>Confirmar nova senha</label>
         <input type="password" formControlName="confirmarNovaSenha" />
-        <small class="hint" *ngIf="form.touched && form.errors?.['senhaDiferente']">
+
+        <small class="hint error"
+               *ngIf="form.touched && form.errors?.['senhaDiferente']">
           As senhas não conferem.
         </small>
 
-        <button type="submit" [disabled]="form.invalid || loading">Salvar</button>
+        <button type="submit" [disabled]="form.invalid || loading()">Salvar</button>
 
         <div class="links">
           <a routerLink="/login">Voltar para o login</a>
         </div>
 
-        <p class="success" *ngIf="success">{{ success }}</p>
-        <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="success" *ngIf="success()">{{ success() }}</p>
+        <p class="error" *ngIf="error()">{{ error() }}</p>
       </form>
     </div>
   `,
@@ -51,22 +58,22 @@ import { HttpClient } from '@angular/common/http';
     .success { color: #065f46; margin: 0; }
     .error { color: #b91c1c; margin: 0; }
     .hint { color: #6b7280; }
+    .hint.error { color: #b91c1c; }
   `]
 })
 export class ResetPasswordComponent {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
-  private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  loading = false;
-  success = '';
-  error = '';
-
-  token = computed(() => this.route.snapshot.queryParamMap.get('token'));
+  loading = signal(false);
+  success = signal('');
+  error = signal('');
 
   form = this.fb.group(
     {
+      email: ['', [Validators.required, Validators.email]],
+      code: ['', [Validators.required, Validators.minLength(4)]],
       novaSenha: ['', [Validators.required, Validators.minLength(6)]],
       confirmarNovaSenha: ['', [Validators.required, Validators.minLength(6)]],
     },
@@ -80,26 +87,41 @@ export class ResetPasswordComponent {
   }
 
   submit(): void {
-    this.success = '';
-    this.error = '';
-    if (!this.token()) {
-      this.error = 'Token ausente.';
-      return;
-    }
+    this.success.set('');
+    this.error.set('');
     if (this.form.invalid) return;
 
-    const { novaSenha } = this.form.getRawValue();
-    this.loading = true;
+    const { email, code, novaSenha } = this.form.getRawValue();
+    this.loading.set(true);
 
-    // ✅ mock por enquanto
-    // depois vira:
-    // this.http.post('/api/auth/reset-password', { token: this.token(), newPassword: novaSenha }).subscribe(...)
-    setTimeout(() => {
-      this.loading = false;
-      this.success = 'Senha redefinida com sucesso. Você já pode fazer login.';
+    this.http.post('/api/auth/reset-password', {
+      email,
+      code,
+      newPassword: novaSenha
+    }).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.success.set('Senha redefinida com sucesso. Você já pode fazer login.');
+        setTimeout(() => this.router.navigateByUrl('/login'), 2500); //
+      },
+      error: (err) => {
+        console.error(err);
+        this.loading.set(false);
 
-      // Redireciona após um breve delay (opcional)
-      setTimeout(() => this.router.navigateByUrl('/login'), 600);
-    }, 300);
+        const errCode = err?.error?.code;
+
+        if (errCode === 'INVALID_RESET_CODE') {
+          this.error.set(err?.error?.message ?? 'Código inválido. Verifique e tente novamente.');
+          return;
+        }
+
+        if (errCode === 'RESET_CODE_EXPIRED') {
+          this.error.set(err?.error?.message ?? 'Código expirado. Volte e solicite um novo código.');
+          return;
+        }
+
+        this.error.set(err?.error?.message ?? 'Não foi possível redefinir a senha.');
+      }
+    });
   }
 }

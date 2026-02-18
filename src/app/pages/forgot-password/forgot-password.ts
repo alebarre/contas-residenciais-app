@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-forgot-password',
@@ -45,6 +46,7 @@ import { HttpClient } from '@angular/common/http';
 export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
+  private router = inject(Router);
 
   loading = false;
   success = '';
@@ -62,12 +64,17 @@ export class ForgotPasswordComponent {
     const { email } = this.form.getRawValue();
     this.loading = true;
 
-    // ✅ mock por enquanto
-    // depois vira:
-    // this.http.post('/api/auth/forgot-password', { email }).subscribe(...)
-    setTimeout(() => {
-      this.loading = false;
-      this.success = 'Se o email estiver cadastrado, você receberá um link para redefinir a senha.';
-    }, 300);
+    this.http.post('/api/auth/forgot-password', { email }).subscribe({
+      next: () => {
+        this.loading = false;
+        this.success = 'Se o email estiver cadastrado, você receberá um código para redefinir a senha.';
+        this.router.navigate(['/reset-password'], { queryParams: { email } });
+      },
+      error: () => {
+        this.loading = false;
+        this.success = 'Se o email estiver cadastrado, você receberá um código para redefinir a senha.';
+      }
+    });
   }
+
 }
