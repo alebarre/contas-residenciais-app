@@ -372,7 +372,7 @@ export class DashboardComponent {
 
   mesLabel = computed(() => {
     const m = this.mes();
-    const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const nomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return nomes[m - 1] ?? String(m);
   });
 
@@ -489,7 +489,7 @@ export class DashboardComponent {
     // se já havia algo pendente, efetiva antes (evita empilhar undos)
     const pendente = this.pendenteExclusao();
     if (pendente) {
-      this.efetivarExclusao(pendente.id);
+      this.efetivarExclusao(Number(pendente.id));
       this.limparUndo();
     }
 
@@ -518,7 +518,7 @@ export class DashboardComponent {
     this.undoTimer = window.setTimeout(() => {
       const p = this.pendenteExclusao();
       if (!p) return;
-      this.efetivarExclusao(p.id);
+      this.efetivarExclusao(Number(p.id));
       this.limparUndo();
     }, 5000);
   }
@@ -527,12 +527,10 @@ export class DashboardComponent {
     const ano = this.ano();
     const mes = this.mes();
 
-    this.despesasService.listarPorMes(ano, mes).subscribe(list => this.despesas.set(list));
-
-    this.dashboardService.getResumo(ano, mes).subscribe(r => {
-      this.dashboardService.getHistoricoAnual(ano).subscribe(hist => {
-        this.resumo.set({ ...r, historicoMensal: hist });
-      });
+    // ✅ 1 chamada única: summary (inclui historicoMensal) + expenses do mês
+    this.dashboardService.getDashboard(ano, mes).subscribe((payload) => {
+      this.despesas.set(payload.expenses ?? []);
+      this.resumo.set(payload.summary);
     });
   }
 
@@ -552,8 +550,8 @@ export class DashboardComponent {
     this.pendenteExclusao.set(null);
   }
 
-  private efetivarExclusao(id: string): void {
-    this.despesasService.excluir(id).subscribe(() => {
+  private efetivarExclusao(id: number): void {
+    this.despesasService.excluir(id.toString()).subscribe(() => {
       this.toast.success('Despesa excluída.');
       this.reload();
     });

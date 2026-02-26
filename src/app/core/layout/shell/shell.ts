@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, HostListener, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar';
 import { ToastComponent } from '../../../shared/toast/toast.component';
@@ -11,6 +11,11 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
   standalone: true,
   imports: [RouterOutlet, SidebarComponent, ToastComponent, ConfirmComponent],
   template: `
+    <!-- Backdrop mobile -->
+    @if (isMobile() && sidebarOpen()) {
+      <div class="backdrop" (click)="sidebarOpen.set(false)"></div>
+    }
+
     <div class="shell">
       <app-sidebar
         [open]="sidebarOpen()"
@@ -31,16 +36,28 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
     </div>
     <app-toast></app-toast>
     <app-confirm></app-confirm>
-
   `,
   styles: [`
-    .shell { display: flex; min-height: 100vh; background: #fff; }
-    .content { flex: 1; min-width: 0; }
+    .shell {
+      display: flex;
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    .content {
+      flex: 1;
+      min-width: 0;
+      /* garante que o conteúdo nunca fique abaixo do sidebar fixo no mobile */
+    }
 
     .topbar {
-      position: sticky; top: 0; z-index: 10;
-      display: grid; grid-template-columns: auto 1fr auto;
-      gap: 12px; align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
       padding: 12px 16px;
       border-bottom: 1px solid #e5e7eb;
       background: #fff;
@@ -52,14 +69,56 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
       padding: 6px 10px;
       border-radius: 8px;
       cursor: pointer;
+      font-size: 16px;
     }
 
     .title { font-weight: 600; text-align: center; }
     .spacer { width: 24px; }
 
-    .page { padding: 16px; }
+    .page {
+      padding: 16px;
+    }
+
+    /* Backdrop mobile */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .4);
+      z-index: 199;
+    }
+
+    /* ── Responsivo ─────────────────────────────────────── */
+    @media (max-width: 767px) {
+      .shell {
+        /* no mobile o sidebar está fora do fluxo (position:fixed),
+           então o conteúdo ocupa toda a largura */
+        display: block;
+      }
+
+      .page {
+        padding: 12px;
+      }
+    }
   `]
 })
-export class ShellComponent {
-  sidebarOpen = signal(true);
+export class ShellComponent implements OnInit {
+  sidebarOpen = signal(false);
+  isMobile = signal(false);
+
+  ngOnInit(): void {
+    this.checkMobile();
+    // desktop começa com sidebar aberta
+    if (!this.isMobile()) {
+      this.sidebarOpen.set(true);
+    }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.checkMobile();
+  }
+
+  private checkMobile(): void {
+    this.isMobile.set(window.innerWidth < 768);
+  }
 }
