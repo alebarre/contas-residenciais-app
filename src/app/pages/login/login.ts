@@ -1,15 +1,14 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <div class="card">
       <h2>Login</h2>
@@ -21,14 +20,16 @@ import { HttpErrorResponse } from '@angular/common/http';
         <label>Senha</label>
         <input type="password" formControlName="senha" />
 
-        <button type="submit" [disabled]="form.invalid || loading">Entrar</button>
+        <button type="submit" [disabled]="form.invalid || loading()">Entrar</button>
 
         <div class="links">
           <a routerLink="/register">Criar conta</a>
           <a routerLink="/forgot-password">Esqueci minha senha</a>
         </div>
 
-        <p class="error" *ngIf="error">{{ error }}</p>
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
       </form>
     </div>
   `,
@@ -47,8 +48,8 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
-  loading = false;
-  error = '';
+  loading = signal(false);
+  error = signal('');
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -56,22 +57,21 @@ export class LoginComponent {
   });
 
   submit(): void {
-    this.error = '';
+    this.error.set('');
     if (this.form.invalid) return;
 
     const { email, senha } = this.form.getRawValue();
-    this.loading = true;
+    this.loading.set(true);
 
     this.auth.login(email!, senha!).subscribe({
       next: (resp) => {
         this.auth.applySession(resp);
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigateByUrl('/app/dashboard');
       },
       error: (err: HttpErrorResponse) => {
-        this.loading = false;
-        // padrão do seu backend: { status, error, message, code, ... }
-        this.error = err.error?.message ?? 'Falha no login';
+        this.loading.set(false);
+        this.error.set(err.error?.message ?? 'Falha no login');
       }
     });
   }

@@ -37,26 +37,26 @@ export class ExportService {
     let y = 36;
 
     doc.setFontSize(14);
-    doc.text(data.title, marginLeft, y);
+    doc.text(String(data.title ?? ''), marginLeft, y);
     y += 18;
 
     if (data.subtitle) {
-        doc.setFontSize(10);
-        doc.text(data.subtitle, marginLeft, y);
-        y += 14;
+      doc.setFontSize(10);
+      doc.text(data.subtitle, marginLeft, y);
+      y += 14;
     }
 
     const generatedAt = new Date();
     const stamp = generatedAt.toLocaleString();
 
     autoTable(doc, {
-        head: [data.columns],
-        body: data.rows.map(r => r.map(v => (v ?? '').toString())),
-        startY: y + 8,
-        styles: { fontSize: 9, cellPadding: 6 },
-        headStyles: { fontSize: 9 },
-        margin: { left: marginLeft, right: 40 },
-        didDrawPage: (hookData) => {
+      head: [data.columns],
+      body: data.rows.map(r => r.map(v => (v ?? '').toString())),
+      startY: y + 8,
+      styles: { fontSize: 9, cellPadding: 6 },
+      headStyles: { fontSize: 9 },
+      margin: { left: marginLeft, right: 40 },
+      didDrawPage: (hookData) => {
         const pageNumber = doc.getNumberOfPages();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -64,58 +64,58 @@ export class ExportService {
         doc.setFontSize(9);
         doc.text(`Gerado em: ${stamp}`, marginLeft, pageHeight - 18);
         doc.text(`Página ${pageNumber}`, pageWidth - 90, pageHeight - 18);
-        }
+      }
     });
 
     doc.save(`${data.fileBaseName}.pdf`);
-}
+  }
 
 
   exportXls(data: ExportTable): void {
     const sheetData = [
-        data.columns,
-        ...data.rows.map(r => r.map(v => (v ?? '')))
+      data.columns,
+      ...data.rows.map(r => r.map(v => (v ?? '')))
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
     const colWidths = data.columns.map((c, idx) => {
-        const maxLen = Math.max(
+      const maxLen = Math.max(
         c.length,
         ...data.rows.map(r => String(r[idx] ?? '').length)
-        );
-        return { wch: Math.min(40, Math.max(12, maxLen + 2)) };
+      );
+      return { wch: Math.min(40, Math.max(12, maxLen + 2)) };
     });
     (ws as any)['!cols'] = colWidths;
 
     // 2 casas em colunas que parecem valores
     const valorCols = data.columns
-        .map((c, i) => ({ c: c.toLowerCase(), i }))
-        .filter(x => x.c.includes('r$') || x.c.includes('valor'))
-        .map(x => x.i);
+      .map((c, i) => ({ c: c.toLowerCase(), i }))
+      .filter(x => x.c.includes('r$') || x.c.includes('valor'))
+      .map(x => x.i);
 
     // Tipo numérico e formato nas células (exceto header)
     for (let r = 2; r <= data.rows.length + 1; r++) { // 1-based in sheet (row 1 header)
-        for (const ci of valorCols) {
+      for (const ci of valorCols) {
         const cellAddress = XLSX.utils.encode_cell({ r: r - 1, c: ci });
         const cell = ws[cellAddress];
         if (!cell) continue;
 
         const n = Number(String(cell.v).replace(',', '.'));
         if (Number.isFinite(n)) {
-            cell.t = 'n';
-            cell.v = n;
-            // formato numérico com 2 casas (ex: 1,234.56)
-            cell.z = '#,##0.00';
+          cell.t = 'n';
+          cell.v = n;
+          // formato numérico com 2 casas (ex: 1,234.56)
+          cell.z = '#,##0.00';
         }
-        }
+      }
     }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
 
     XLSX.writeFile(wb, `${data.fileBaseName}.xlsx`);
-    }
+  }
 
 
   private downloadBlob(content: string, filename: string, mime: string): void {

@@ -5,7 +5,7 @@ import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
 import { Despesa } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
-import { ExportService } from '../../services/export.service';
+import { ExportService, ExportTable } from '../../services/export.service';
 import { ToastService } from '../../services/toast.service';
 
 type StatusFiltro = 'TODAS' | 'PAGAS' | 'PENDENTES';
@@ -39,213 +39,133 @@ type TipoFiltro = 'TODOS' | ItemTipo;
           </select>
 
           <select [(ngModel)]="tipo" (ngModelChange)="applyFilters()">
-            <option value="TODOS">Todos os tipos</option>
+            <option value="TODOS">Todos</option>
             <option value="EMPRESA">Empresa</option>
             <option value="PROFISSIONAL">Profissional</option>
             <option value="SERVICO">Serviço</option>
-            <option value="DESPESA">Despesa</option>
           </select>
         </div>
       </div>
 
-      <section class="cards">
-        <div class="card">
-          <div class="k">Valor no mês</div>
-          <div class="v">{{ totalPagasValor() | currency:'BRL' }}</div>
-        </div>
-
-        <div class="card">
-          <div class="k">Total geral</div>
-          <div class="v">{{ totalValor() | currency:'BRL' }}</div>
-        </div>
-
-        <div class="card paid">
-          <div class="k">Pagas</div>
-          <div class="v">{{ totalPagasQtd() }}</div>
-          <div class="muted">{{ totalPagasValor() | currency:'BRL' }}</div>
-        </div>
-
-        <div class="card pending">
-          <div class="k">Pendentes</div>
-          <div class="v">{{ totalPendentesQtd() }}</div>
-          <div class="muted">{{ totalPendentesValor() | currency:'BRL' }}</div>
-        </div>
-      </section>
-
-      <section class="list">
-        <div class="list-header">
-          <h3>Listagem</h3>
-          <div class="muted">{{ filtradas().length }} registro(s)</div>
-        </div>
-
-        <div class="table-wrap" *ngIf="filtradas().length; else empty">
-          <table>
-            <thead>
-              <tr>
-                <th>Vencimento</th>
-                <th>Pagamento</th>
-                <th>Tipo</th>
-                <th>Item</th>
-                <th>Atividade</th>
-                <th>Descrição</th>
-                <th>Banco</th>
-                <th class="right">Valor</th>
-                <th class="right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let d of filtradas()">
-                <td>{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
-                <td>{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
-                <td>{{ tipoDoItem(d.itemId) }}</td>
-                <td>{{ d.itemNome }}</td>
-                <td>{{ atividadeDoItem(d.itemId) }}</td>
-                <td>{{ d.descricao }}</td>
-                <td>{{ d.bancoPagamento }}</td>
-                <td class="right">{{ d.valor | currency:'BRL' }}</td>
-                <td class="right">{{ d.dataPagamento ? 'Paga' : 'Pendente' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="export">
-          <button type="button" class="btn" (click)="exportar('txt')">TXT</button>
-          <button type="button" class="btn" (click)="exportar('pdf')">PDF</button>
-          <button type="button" class="btn" (click)="exportar('xls')">XLS</button>
-        </div>
-
-        <ng-template #empty>
-          <div class="empty">
-            Nenhuma despesa encontrada para os filtros selecionados.
+      <div class="card">
+        <div class="card-head">
+          <div class="kpi">
+            <div class="k">Total de registros</div>
+            <div class="v">{{ filtradas().length }}</div>
           </div>
-        </ng-template>
-      </section>
+          <div class="kpi">
+            <div class="k">Total (R$)</div>
+            <div class="v">{{ totalValor() | currency:'BRL' }}</div>
+          </div>
+          <div class="kpi">
+            <div class="k">Pagas</div>
+            <div class="v">{{ totalPagasQtd() }}</div>
+          </div>
+          <div class="kpi">
+            <div class="k">Pendentes</div>
+            <div class="v">{{ totalPendentesQtd() }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap" *ngIf="filtradas().length; else empty">
+        <table>
+          <thead>
+            <tr>
+              <th>Vencimento</th>
+              <th>Pagamento</th>
+              <th>Tipo</th>
+              <th>Item</th>
+              <th>Atividade</th>
+              <th>Descrição</th>
+              <th>Banco</th>
+              <th class="right">Valor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let d of filtradas()">
+              <td>{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
+              <td>{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
+              <td>{{ tipoDoItem(d.itemId) }}</td>
+              <td>{{ d.itemNome }}</td>
+              <td>{{ atividadeDoItem(d.itemId) }}</td>
+              <td>{{ d.descricao }}</td>
+              <td>{{ d.bancoPagamento }}</td>
+              <td class="right">{{ d.valor | currency:'BRL' }}</td>
+              <td>{{ d.dataPagamento ? 'Paga' : 'Pendente' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="export">
+          <button type="button" class="btn_export" (click)="exportar('txt')">TXT</button>
+          <button type="button" class="btn_export" (click)="exportar('pdf')">PDF</button>
+          <button type="button" class="btn_export" (click)="exportar('xlsx')">XLSX</button>
+        </div>
+      </div>
+
+      <ng-template #empty>
+        <div class="empty">Nenhuma despesa encontrada para os filtros selecionados.</div>
+      </ng-template>
     </div>
   `,
   styles: [`
     .wrap { max-width: 1100px; margin: 0 auto; }
+    .header { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:12px; }
+    .sub { margin: 2px 0 0; color:#6b7280; }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
+    .filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    select { padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; }
 
-    h2 { margin: 0; }
-    .sub { margin: 2px 0 0; color: #6b7280; }
+    .card { border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:12px; margin-bottom:12px; }
+    .card-head { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; justify-content:space-between; }
+    .kpi .k { color:#6b7280; font-size:12px; }
+    .kpi .v { font-size:18px; font-weight:700; }
 
-    .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    select {
-      padding: 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      background: #fff;
-    }
+    .export { display:flex; gap:8px; padding:12px; justify-content:flex-end; border-top:1px solid #e5e7eb; }
+    .btn_export { border:1px solid #e5e7eb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; background-color: #6b7280; color: #fff;}
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 14px;
-    }
+    .table-wrap { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#fff; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px; border-bottom:1px solid #e5e7eb; vertical-align:top; }
+    thead th { background:#f9fafb; text-align:left; }
+    .right { text-align:right; }
 
-    .card {
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff;
-    }
-
-    .card.paid { background: #f0fdf4; border-color: #bbf7d0; }
-    .card.pending { background: #fffbeb; border-color: #fde68a; }
-
-    .k { color: #6b7280; font-size: 12px; }
-    .v { font-size: 22px; font-weight: 700; }
-    .muted { color: #6b7280; font-weight: 500; font-size: 12px; }
-
-    .list { margin-top: 8px; }
-    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-
-    .table-wrap {
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
-    thead th { background: #f9fafb; text-align: left; }
-    .right { text-align: right; }
-
-    .export { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
-
-    .btn {
-      border: 1px solid #e5e7eb;
-      background: #fff;
-      padding: 10px 12px;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-
-    .empty {
-      padding: 12px;
-      color: #6b7280;
-      text-align: center;
-      border: 1px dashed #e5e7eb;
-      border-radius: 12px;
-      background: #fff;
-    }
-
-    @media (max-width: 980px) {
-      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 640px) {
-      .header { flex-direction: column; align-items: stretch; }
-      .cards { grid-template-columns: 1fr; }
-    }
+    .empty { padding:12px; color:#6b7280; text-align:center; border:1px dashed #e5e7eb; border-radius:12px; background:#fff; }
   `]
 })
 export class RelatorioMensalComponent {
   private despesasService = inject(DespesasService);
   private itensService = inject(ItensService);
   private exportService = inject(ExportService);
+  private toast = inject(ToastService);
 
-  private now = new Date();
-  ano = this.now.getFullYear();
-  mes = this.now.getMonth() + 1;
+  ano = new Date().getFullYear();
+  mes = new Date().getMonth() + 1;
 
   status: StatusFiltro = 'TODAS';
   tipo: TipoFiltro = 'TODOS';
+
+  despesas = signal<Despesa[]>([]);
+  filtradas = signal<Despesa[]>([]);
+  itens = signal<Item[]>([]);
 
   meses = [
     { value: 1, label: 'Jan' }, { value: 2, label: 'Fev' }, { value: 3, label: 'Mar' },
     { value: 4, label: 'Abr' }, { value: 5, label: 'Mai' }, { value: 6, label: 'Jun' },
     { value: 7, label: 'Jul' }, { value: 8, label: 'Ago' }, { value: 9, label: 'Set' },
-    { value: 10, label: 'Out' }, { value: 11, label: 'Nov' }, { value: 12, label: 'Dez' },
+    { value: 10, label: 'Out' }, { value: 11, label: 'Nov' }, { value: 12, label: 'Dez' }
   ];
 
-  itens = signal<Item[]>([]);
-  despesas = signal<Despesa[]>([]);
-  filtradas = signal<Despesa[]>([]);
-
-  anosDisponiveis = computed(() => {
-    const y = this.now.getFullYear();
-    return [y - 1, y, y + 1];
-  });
-
-  constructor(private toast: ToastService) {
-    // quando itens chegam, reprocessa filtros (evita tudo virar '—')
-    this.itensService.listar().subscribe(list => {
-      this.itens.set(list ?? []);
-      this.applyFilters();
-    });
-
+  constructor() {
+    this.itensService.listar().subscribe(list => this.itens.set(list ?? []));
     this.reload();
+  }
+
+  anosDisponiveis(): number[] {
+    const current = new Date().getFullYear();
+    return [current - 1, current, current + 1];
   }
 
   reload(): void {
@@ -272,59 +192,40 @@ export class RelatorioMensalComponent {
     this.filtradas.set(byTipo);
   }
 
-  // ✅ FIX UUID: itemId e item.id são string
   tipoDoItem(itemId: string): ItemTipo | '—' {
     return this.itens().find(i => i.id.toString() === String(itemId))?.tipo ?? '—';
   }
 
-  // ✅ FIX UUID: itemId e item.id são string
   atividadeDoItem(itemId: string): string {
     return this.itens().find(i => i.id.toString() === String(itemId))?.atividade ?? '—';
   }
 
   exportar(formato: 'txt' | 'pdf' | 'xls' | 'xlsx'): void {
-    const rows = this.filtradas().map(d => ({
-      Vencimento: d.dataVencimento,
-      Pagamento: d.dataPagamento ?? '',
-      Tipo: this.tipoDoItem(d.itemId),
-      Item: d.itemNome,
-      Atividade: this.atividadeDoItem(d.itemId),
-      Descricao: d.descricao,
-      Banco: d.bancoPagamento,
-      Valor: Number(d.valor ?? 0),
-      Status: d.dataPagamento ? 'Paga' : 'Pendente'
-    }));
+    const mm = String(this.mes).padStart(2, '0');
 
-    const payload = {
-      filename: `relatorio_mensal_${this.ano}_${String(this.mes).padStart(2, '0')}`,
-      rows
+    const table: ExportTable = {
+      title: 'Relatório Mensal',
+      subtitle: `Mês: ${mm}/${this.ano} | Status: ${this.status} | Tipo: ${this.tipo}`,
+      columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
+      rows: this.filtradas().map(d => ([
+        d.dataVencimento,
+        d.dataPagamento ?? '',
+        this.tipoDoItem(d.itemId),
+        d.itemNome,
+        this.atividadeDoItem(d.itemId),
+        d.descricao,
+        d.bancoPagamento ?? '',
+        Number(d.valor ?? 0).toFixed(2),
+        d.dataPagamento ? 'Paga' : 'Pendente'
+      ])),
+      fileBaseName: `relatorio_mensal_${this.ano}_${mm}`
     };
 
-    const exp: any = this.exportService;
+    if (formato === 'txt') return this.exportService.exportTxt(table);
+    if (formato === 'pdf') return this.exportService.exportPdf(table);
+    if (formato === 'xls' || formato === 'xlsx') return this.exportService.exportXls(table);
 
-    // tenta os métodos existentes no seu ExportService
-    if (formato === 'txt') {
-      if (typeof exp.exportTxt === 'function') return exp.exportTxt(payload);
-      if (typeof exp.exportTXT === 'function') return exp.exportTXT(payload);
-    }
-
-    if (formato === 'pdf') {
-      if (typeof exp.exportPdf === 'function') return exp.exportPdf(payload);
-      if (typeof exp.exportPDF === 'function') return exp.exportPDF(payload);
-    }
-
-    if (formato === 'xls') {
-      if (typeof exp.exportXls === 'function') return exp.exportXls(payload);
-    }
-
-    if (formato === 'xlsx') {
-      if (typeof exp.exportXlsx === 'function') return exp.exportXlsx(payload);
-      // alguns projetos usam exportXls mesmo pra xlsx
-      if (typeof exp.exportXls === 'function') return exp.exportXls(payload);
-    }
-
-    // fallback seguro
-    this.toast?.error?.('Exportação não disponível (método não encontrado no ExportService).');
+    this.toast.error('Formato de exportação não suportado.');
   }
 
   totalValor = computed(() =>
@@ -337,17 +238,5 @@ export class RelatorioMensalComponent {
 
   totalPendentesQtd = computed(() =>
     this.filtradas().filter(d => !d.dataPagamento).length
-  );
-
-  totalPagasValor = computed(() =>
-    this.filtradas()
-      .filter(d => !!d.dataPagamento)
-      .reduce((acc, d) => acc + Number(d.valor ?? 0), 0)
-  );
-
-  totalPendentesValor = computed(() =>
-    this.filtradas()
-      .filter(d => !d.dataPagamento)
-      .reduce((acc, d) => acc + Number(d.valor ?? 0), 0)
   );
 }
