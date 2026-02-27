@@ -1,62 +1,36 @@
-import { inject, Injectable } from '@angular/core';
-import { StorageService } from '../data/storage/storage.service';
+import { inject, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { User } from '../models/user.model';
-import { signal } from '@angular/core';
 
-
-type UserProfilePatch = {
+export type PatchMeRequest = {
   telefone?: string | null;
   avatarUrl?: string | null;
-  updatedAt: string;
 };
-
-const STORAGE_KEY = 'userProfileByEmail';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
+  private http = inject(HttpClient);
+
   private revSig = signal(0);
   readonly rev = this.revSig.asReadonly();
 
-  private storage = inject(StorageService);
-
-  private keyOf(user: User): string {
-    return (user.email ?? '').trim().toLowerCase();
+  /** Recarrega user do backend (fonte de verdade do perfil) */
+  getMe(): Observable<User> {
+    return this.http.get<User>('/api/me');
   }
 
-  load(user: User): UserProfilePatch {
-    const key = this.keyOf(user);
-    const all = this.storage.get<Record<string, UserProfilePatch>>(STORAGE_KEY, {});
-    return all[key] ?? { telefone: null, avatarUrl: null, updatedAt: new Date().toISOString() };
+  /** Persiste telefone/avatar no backend */
+  patchMe(patch: PatchMeRequest): Observable<User> {
+    return this.http.patch<User>('/api/me', patch).pipe(
+      tap(() => this.revSig.update(v => v + 1))
+    );
   }
 
-  upsert(user: User, patch: Partial<UserProfilePatch>): UserProfilePatch {
-    const key = this.keyOf(user);
-    const all = this.storage.get<Record<string, UserProfilePatch>>(STORAGE_KEY, {});
-    const current = all[key] ?? { telefone: null, avatarUrl: null, updatedAt: new Date().toISOString() };
-
-    const updated: UserProfilePatch = {
-      ...current,
-      ...patch,
-      updatedAt: new Date().toISOString()
-    };
-
-    all[key] = updated;
-    this.storage.set(STORAGE_KEY, all);
-    this.revSig.update(v => v + 1);
-    return updated;
-  }
-
-  clear(user: User): void {
-    const key = this.keyOf(user);
-    const all = this.storage.get<Record<string, UserProfilePatch>>(STORAGE_KEY, {});
-    delete all[key];
-    this.storage.set(STORAGE_KEY, all);
-    this.revSig.update(v => v + 1);
-  }
-
+  /** Avatar para UI: usa o avatarUrl do user, ou fallback genérico */
   getAvatarOrDefault(user: User): string {
-    const local = this.load(user);
-    const avatar = (local.avatarUrl ?? user.avatarUrl ?? '').trim();
+    const avatar = (user.avatarUrl ?? '').trim();
     return avatar ? avatar : DEFAULT_AVATAR_DATA_URL;
   }
 }

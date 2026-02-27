@@ -7,7 +7,7 @@ type YearMonth = string; // 'YYYY-MM'
 
 @Injectable({ providedIn: 'root' })
 export class DespesasService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // DTO de criação (backend resolve itemNome/bancoPagamento)
   // itemId é UUID
@@ -68,14 +68,15 @@ export class DespesasService {
     this.validar(despesa);
 
     const body = {
-      dataVencimento: despesa.dataVencimento,
-      dataPagamento: despesa.dataPagamento ?? null,
-      bancoCode: despesa.bancoCode ?? null,
-      valor: despesa.valor,
-      descricao: despesa.descricao ?? ''
+      itemId: despesa.itemId,                          // ✅ obrigatório na prática
+      dataVencimento: despesa.dataVencimento,          // "YYYY-MM-DD"
+      dataPagamento: despesa.dataPagamento ?? null,    // "YYYY-MM-DD" ou null
+      bancoCode: despesa.bancoCode ?? null,            // number|null
+      valor: Number(despesa.valor),                    // number
+      descricao: despesa.descricao ?? ''               // string
     };
 
-    return this.http.patch<Despesa>(`/api/expenses/${despesa.id}`, body);
+    return this.http.put<Despesa>(`/api/expenses/${despesa.id}`, body);
   }
 
   /** Exclusão efetiva (o undo é no front) */

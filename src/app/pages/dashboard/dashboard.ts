@@ -489,7 +489,7 @@ export class DashboardComponent {
     // se já havia algo pendente, efetiva antes (evita empilhar undos)
     const pendente = this.pendenteExclusao();
     if (pendente) {
-      this.efetivarExclusao(Number(pendente.id));
+      this.efetivarExclusao(pendente.id as string);
       this.limparUndo();
     }
 
@@ -518,7 +518,7 @@ export class DashboardComponent {
     this.undoTimer = window.setTimeout(() => {
       const p = this.pendenteExclusao();
       if (!p) return;
-      this.efetivarExclusao(Number(p.id));
+      this.efetivarExclusao(p.id as string);
       this.limparUndo();
     }, 5000);
   }
@@ -550,8 +550,8 @@ export class DashboardComponent {
     this.pendenteExclusao.set(null);
   }
 
-  private efetivarExclusao(id: number): void {
-    this.despesasService.excluir(id.toString()).subscribe(() => {
+  private efetivarExclusao(id: string): void {
+    this.despesasService.excluir(id).subscribe(() => {
       this.toast.success('Despesa excluída.');
       this.reload();
     });
