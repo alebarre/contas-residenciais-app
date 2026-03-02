@@ -3,12 +3,19 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-export interface ExportTable {
+export interface PdfHeader {
+  name: string;
+  email: string;
+  analyticsLine?: string;
+}export interface ExportTable {
   title: string;
   subtitle?: string;
   columns: string[];
   rows: (string | number | null | undefined)[][];
   fileBaseName: string; // sem extensão
+
+  /** Cabeçalho extra (somente PDF) */
+  pdfHeader?: PdfHeader;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,13 +41,50 @@ export class ExportService {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
     const marginLeft = 40;
-    let y = 36;
+    const marginRight = 40;
 
+    let y = 32;
+
+    // ====== HEADER (perfil + analytics) ======
+    if (data.pdfHeader) {
+      const header = data.pdfHeader;
+
+      const marginLeft = 40;
+      const marginRight = 40;
+
+      doc.setTextColor(17, 24, 39);
+      doc.setFontSize(12);
+      doc.text(header.name ?? '', marginLeft, y + 14);
+
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(10);
+      doc.text(header.email ?? '', marginLeft, y + 30);
+
+      y = y + 44;
+
+      if (header.analyticsLine) {
+        doc.setTextColor(17, 24, 39);
+        doc.setFontSize(10);
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const maxWidth = pageWidth - marginLeft - marginRight;
+        const lines = doc.splitTextToSize(header.analyticsLine, maxWidth);
+        doc.text(lines, marginLeft, y);
+
+        y += (lines.length * 12) + 10;
+      } else {
+        y += 8;
+      }
+    }
+
+    // ====== TÍTULO/SUBTÍTULO (como já é hoje) ======
+    doc.setTextColor(17, 24, 39);
     doc.setFontSize(14);
     doc.text(String(data.title ?? ''), marginLeft, y);
     y += 18;
 
     if (data.subtitle) {
+      doc.setTextColor(107, 114, 128);
       doc.setFontSize(10);
       doc.text(data.subtitle, marginLeft, y);
       y += 14;
@@ -55,12 +99,13 @@ export class ExportService {
       startY: y + 8,
       styles: { fontSize: 9, cellPadding: 6 },
       headStyles: { fontSize: 9 },
-      margin: { left: marginLeft, right: 40 },
-      didDrawPage: (hookData) => {
+      margin: { left: marginLeft, right: marginRight },
+      didDrawPage: () => {
         const pageNumber = doc.getNumberOfPages();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
+        doc.setTextColor(107, 114, 128);
         doc.setFontSize(9);
         doc.text(`Gerado em: ${stamp}`, marginLeft, pageHeight - 18);
         doc.text(`Página ${pageNumber}`, pageWidth - 90, pageHeight - 18);
@@ -69,7 +114,6 @@ export class ExportService {
 
     doc.save(`${data.fileBaseName}.pdf`);
   }
-
 
   exportXls(data: ExportTable): void {
     const sheetData = [
@@ -94,8 +138,7 @@ export class ExportService {
       .filter(x => x.c.includes('r$') || x.c.includes('valor'))
       .map(x => x.i);
 
-    // Tipo numérico e formato nas células (exceto header)
-    for (let r = 2; r <= data.rows.length + 1; r++) { // 1-based in sheet (row 1 header)
+    for (let r = 2; r <= data.rows.length + 1; r++) {
       for (const ci of valorCols) {
         const cellAddress = XLSX.utils.encode_cell({ r: r - 1, c: ci });
         const cell = ws[cellAddress];
@@ -105,7 +148,6 @@ export class ExportService {
         if (Number.isFinite(n)) {
           cell.t = 'n';
           cell.v = n;
-          // formato numérico com 2 casas (ex: 1,234.56)
           cell.z = '#,##0.00';
         }
       }
@@ -117,7 +159,6 @@ export class ExportService {
     XLSX.writeFile(wb, `${data.fileBaseName}.xlsx`);
   }
 
-
   private downloadBlob(content: string, filename: string, mime: string): void {
     const blob = new Blob([content], { type: mime });
     const url = window.URL.createObjectURL(blob);
@@ -128,5 +169,20 @@ export class ExportService {
     a.click();
 
     window.URL.revokeObjectURL(url);
+  }
+
+  private getInitials(name: string): string {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    const a = parts[0]?.[0] ?? '';
+    const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+    return (a + b).toUpperCase() || 'U';
+  }
+
+  private detectImageFormat(dataUrl: string): 'PNG' | 'JPEG' | 'WEBP' | null {
+    const v = (dataUrl ?? '').trim().toLowerCase();
+    if (v.startsWith('data:image/png')) return 'PNG';
+    if (v.startsWith('data:image/jpg') || v.startsWith('data:image/jpeg')) return 'JPEG';
+    if (v.startsWith('data:image/webp')) return 'WEBP';
+    return null; // svg/url/etc -> fallback
   }
 }

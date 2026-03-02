@@ -138,24 +138,24 @@ import { BancosService } from '../../services/bancos.service';
         <table>
           <thead>
             <tr>
-              <th>Vencimento</th>
-              <th>Pagamento</th>
-              <th>Item</th>
-              <th>Descrição</th>
-              <th>Banco</th>
-              <th class="right">Valor</th>
-              <th class="right">Ações</th>
+              <th class="col-venc">Vencimento</th>
+              <th class="col-pag">Pagamento</th>
+              <th class="col-item">Item</th>
+              <th class="col-desc">Descrição</th>
+              <th class="col-bank">Banco</th>
+              <th class="col-val right">Valor</th>
+              <th class="col-actions right">Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let d of despesas()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
-              <td>{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ d.itemNome }}</td>
-              <td>{{ d.descricao }}</td>
-              <td>{{ d.bancoPagamento }}</td>
-              <td class="right">{{ d.valor | currency:'BRL' }}</td>
-              <td class="right">
+              <td class="col-venc">{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
+              <td class="col-pag">{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
+              <td class="col-item">{{ d.itemNome }}</td>
+              <td class="col-desc">{{ d.descricao }}</td>
+              <td class="col-bank">{{ d.bancoPagamento }}</td>
+              <td class="col-val right">{{ d.valor | currency:'BRL' }}</td>
+              <td class="col-actions right">
                 <button type="button" class="btn-sm" (click)="editar(d)">Editar</button>
                 <button type="button" class="btn-sm danger" (click)="excluir(d)">Excluir</button>
               </td>
@@ -289,11 +289,78 @@ import { BancosService } from '../../services/bancos.service';
 
     .edit-title { margin-bottom: 10px; }
 
+  /* ===== Editor de despesa: responsivo ===== */
+
+  .edit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* “Descrição” já ocupa a linha toda */
+  .field.full {
+    grid-column: 1 / -1;
+  }
+
+  /* Tablet: 2 colunas */
+  @media (max-width: 980px) {
     .edit-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    /* Valor embaixo do banco (melhor leitura) */
+    .field {
+      min-width: 0;
+    }
+  }
+
+  /* Mobile: 1 coluna */
+  @media (max-width: 640px) {
+    .edit-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .edit-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .edit-actions .btn {
+      width: 100%;
+    }
+  }
+  /* Mobile (<= 640px): manter só Vencimento, Item, Valor, Ações */
+  @media (max-width: 640px) {
+    .col-pag,
+    .col-desc,
+    .col-bank {
+      display: none;
+    }
+
+    /* reduz padding para caber melhor */
+    th, td {
+      padding: 8px;
+    }
+
+    /* ações em coluna para não esmagar */
+    .col-actions .btn-sm {
+      display: block;
+      width: 100%;
+      margin: 4px 0 0;
+    }
+
+    .col-actions .btn-sm:first-child {
+      margin-top: 0;
+    }
+  }
+
+  /* Tablet (641px–980px): esconde Descrição e Banco, mantém Pagamento */
+  @media (min-width: 641px) and (max-width: 980px) {
+    .col-desc,
+    .col-bank {
+      display: none;
+    }
+  }
 
     .field { display: grid; gap: 6px; }
     .field.full { grid-column: 1 / -1; }

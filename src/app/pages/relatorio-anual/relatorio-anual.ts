@@ -7,6 +7,8 @@ import { ItensService } from '../../services/itens.service';
 import { Despesa } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
 import { ExportService, ExportTable } from '../../services/export.service';
+import { ProfileService } from '../../services/profile.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 
 type TipoFiltro = 'TODOS' | ItemTipo;
@@ -273,6 +275,8 @@ export class RelatorioAnualComponent {
   private despesasService = inject(DespesasService);
   private itensService = inject(ItensService);
   private exportService = inject(ExportService);
+  private auth = inject(AuthService);
+  private profile = inject(ProfileService);
 
   private now = new Date();
   ano = this.now.getFullYear();
@@ -307,9 +311,9 @@ export class RelatorioAnualComponent {
         const filtrada = this.tipo === 'TODOS'
           ? list
           : list.filter(d => {
-              const tipo = this.tipoDoItem(d.itemId);
-              return tipo !== '—' && tipo === this.tipo;
-            });
+            const tipo = this.tipoDoItem(d.itemId);
+            return tipo !== '—' && tipo === this.tipo;
+          });
 
         const pagas = filtrada.filter(d => !!d.dataPagamento);
         const pendentes = filtrada.filter(d => !d.dataPagamento);
@@ -337,12 +341,20 @@ export class RelatorioAnualComponent {
   }
 
   mesLabel(m: number): string {
-    const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const nomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return nomes[m - 1] ?? String(m);
   }
 
   exportar(formato: 'txt' | 'pdf' | 'xls'): void {
     const rows = this.resumoPorMes();
+    const user = this.auth.getUser();
+
+    const totalQtd = this.totalAnualQtd();
+    const totalVal = this.totalAnualValor();
+    const pagasQtd = this.pagasAnualQtd();
+    const pagasVal = this.pagasAnualValor();
+    const pendQtd = this.pendentesAnualQtd();
+    const pendVal = this.pendentesAnualValor();
 
     const table: ExportTable = {
       title: 'Relatório Anual',
@@ -357,7 +369,12 @@ export class RelatorioAnualComponent {
         r.pendentesQtd,
         Number(r.pendentesValor ?? 0).toFixed(2),
       ])),
-      fileBaseName: `relatorio_anual_${this.ano}`
+      fileBaseName: `relatorio_anual_${this.ano}`,
+      pdfHeader: user ? {
+        name: user.nome,
+        email: user.email,
+        analyticsLine: `Ano: ${this.ano} | Total: ${totalQtd} (R$ ${totalVal.toFixed(2)}) | Pagas: ${pagasQtd} (R$ ${pagasVal.toFixed(2)}) | Pendentes: ${pendQtd} (R$ ${pendVal.toFixed(2)})`
+      } : undefined
     };
 
     if (formato === 'txt') this.exportService.exportTxt(table);
@@ -385,22 +402,19 @@ export class RelatorioAnualComponent {
     // ordena por vencimento
     filtrada.sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
 
-    const table = {
+    const user = this.auth.getUser();
+
+    const table: ExportTable = {
       title: 'Relatório Anual Detalhado',
       subtitle: `Ano: ${this.ano} | Tipo: ${this.tipo}`,
       columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
-      rows: filtrada.map(d => ([
-        d.dataVencimento,
-        d.dataPagamento || '',
-        this.tipoDoItem(d.itemId),
-        d.itemNome,
-        this.itens().find(i => i.id === Number(d.itemId))?.atividade ?? '—',
-        d.descricao,
-        d.bancoPagamento,
-        Number(d.valor ?? 0).toFixed(2),
-        d.dataPagamento ? 'Paga' : 'Pendente'
-      ])),
-      fileBaseName: `relatorio_anual_detalhado_${this.ano}`
+      rows: filtrada.map(d => ([ /* ... */])),
+      fileBaseName: `relatorio_anual_detalhado_${this.ano}`,
+      pdfHeader: user ? {
+        name: user.nome,
+        email: user.email,
+        analyticsLine: `Ano: ${this.ano} | Total: ...`
+      } : undefined
     };
 
     if (formato === 'txt') this.exportService.exportTxt(table);
