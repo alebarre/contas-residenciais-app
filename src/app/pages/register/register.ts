@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { User } from '../../models/user.model';
 
 @Component({
   selector: 'app-register',
@@ -42,9 +43,9 @@ import { AuthService } from '../../core/auth/auth.service';
         <div class="links">
           <a routerLink="/login">Voltar para o login</a>
         </div>
-
-        <p class="error" *ngIf="error">{{ error }}</p>
       </form>
+      <div class="error" *ngIf="error">{{ error }}</div>
+      <div class="success" *ngIf="success">{{ success }}</div>
     </div>
   `,
   styles: [`
@@ -55,6 +56,7 @@ import { AuthService } from '../../core/auth/auth.service';
     button:disabled { opacity: .6; cursor: not-allowed; }
     .links { display: flex; justify-content: flex-end; font-size: 14px; }
     .error { color: #b91c1c; margin: 0; }
+    .success { color: #065f46; margin: 0; }
     .hint { color: #6b7280; }
   `]
 })
@@ -62,9 +64,11 @@ export class RegisterComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = false;
   error = '';
+  success = '';
 
   form = this.fb.group(
     {
@@ -82,23 +86,33 @@ export class RegisterComponent {
     return senha && confirmar && senha !== confirmar ? { senhaDiferente: true } : null;
   }
 
-  submit(): void {
-    this.error = '';
-    if (this.form.invalid) return;
+  submit() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
-    const { nome, email } = this.form.getRawValue();
+    const { nome, email, senha } = this.form.getRawValue();
     this.loading = true;
+    this.error = '';
+    this.success = '';
 
-    // ✅ mock (enquanto não há backend)
-    // depois vira: this.http.post('/api/auth/register', {...}).subscribe(...)
-    setTimeout(() => {
-      this.auth.applySession({
-        token: 'fake-jwt-token',
-        user: { nome: nome!, email: email!, avatarUrl: 'https://i.pravatar.cc/80' }
-      });
-
-      this.loading = false;
-      this.router.navigateByUrl('/app/dashboard');
-    }, 300);
+    this.auth.register({ nome: nome ?? '', email: email ?? '', senha: senha ?? '' }).subscribe({
+      next: () => {
+        this.success = 'Conta criada com sucesso! Redirecionando...';
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.router.navigateByUrl('/login');
+        }, 3000);
+      },
+      error: (err) => {
+        this.error = err?.error?.message || 'Erro ao criar conta.';
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
   }
 }

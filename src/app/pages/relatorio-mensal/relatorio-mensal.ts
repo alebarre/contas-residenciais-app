@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { Despesa } from '../../models/despesa.model';
+import { Despesa, PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
 import { ExportService, ExportTable } from '../../services/export.service';
 import { ToastService } from '../../services/toast.service';
@@ -202,16 +202,17 @@ export class RelatorioMensalComponent {
     return this.itens().find(i => i.id.toString() === String(itemId))?.atividade ?? '—';
   }
 
-    exportar(formato: 'txt' | 'pdf' | 'xls' | 'xlsx'): void {
+  exportar(formato: 'txt' | 'pdf' | 'xls' | 'xlsx'): void {
     const mm = String(this.mes).padStart(2, '0');
     const user = this.authService.user?.();
     const table: ExportTable = {
       title: 'Relatório Mensal',
       subtitle: `Mês: ${mm}/${this.ano} | Status: ${this.status} | Tipo: ${this.tipo}`,
-      columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
+      columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Forma', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
       rows: this.filtradas().map(d => ([
         d.dataVencimento,
         d.dataPagamento ?? '',
+        PAYMENT_METHOD_LABEL[d.paymentMethod],
         this.tipoDoItem(d.itemId),
         d.itemNome,
         this.atividadeDoItem(d.itemId),

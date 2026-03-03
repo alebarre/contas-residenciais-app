@@ -8,8 +8,11 @@ interface AuthResponse {
   user: User;
 }
 
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+
+  API_URL = 'http://localhost:3000/api';
 
   private userSig = signal<User | null>(null);
   private tokenSig = signal<string | null>(null);
@@ -55,25 +58,22 @@ export class AuthService {
     return this.userSig();
   }
 
-  /** Setter imperativo (casos raros; normalmente use applySession). */
-  setUser(user: User | null): void {
-    if (user) {
-      this.storage.setUser(user);
-    } else {
-      this.storage.clearAll();
-    }
-    this.userSig.set(user);
+  setUser(user: User) {
+    return this.http.put<AuthResponse>(`${this.API_URL}/auth/register`, user);
+  }
+
+  register(user: { nome: string; email: string; senha: string; telefone?: string; avatarUrl?: string }) {
+    return this.http.post<{ token: string; user: User }>(`${this.API_URL}/auth/register`, user);
   }
 
   /**
    * Atualiza parcialmente o usuário logado (ex.: telefone, avatarUrl),
    * persistindo no TokenStorage também.
    */
-  patchUser(patch: Partial<User>): void {
+  patchUser(updates: Partial<User>): void {
     const current = this.userSig();
     if (!current) return;
-
-    const updated: User = { ...current, ...patch };
+    const updated: User = { ...current, ...updates };
     this.storage.setUser(updated);
     this.userSig.set(updated);
   }

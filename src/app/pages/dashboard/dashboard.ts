@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { ConfirmService } from '../../services/confirm.service';
 import { ToastService } from '../../services/toast.service';
 import { BancosService } from '../../services/bancos.service';
+import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -143,8 +144,9 @@ import { BancosService } from '../../services/bancos.service';
               <th class="col-item">Item</th>
               <th class="col-desc">Descrição</th>
               <th class="col-bank">Banco</th>
+              <th class="col-method">Forma</th>
               <th class="col-val right">Valor</th>
-              <th class="col-actions right">Ações</th>
+              <th class="col-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -154,8 +156,9 @@ import { BancosService } from '../../services/bancos.service';
               <td class="col-item">{{ d.itemNome }}</td>
               <td class="col-desc">{{ d.descricao }}</td>
               <td class="col-bank">{{ d.bancoPagamento }}</td>
-              <td class="col-val right">{{ d.valor | currency:'BRL' }}</td>
-              <td class="col-actions right">
+              <td class="col-method">{{ paymentLabel[d.paymentMethod] }}</td>
+              <td class="col-val">{{ d.valor | currency:'BRL' }}</td>
+              <td class="col-actions">
                 <button type="button" class="btn-sm" (click)="editar(d)">Editar</button>
                 <button type="button" class="btn-sm danger" (click)="excluir(d)">Excluir</button>
               </td>
@@ -252,10 +255,24 @@ import { BancosService } from '../../services/bancos.service';
       background: #fff;
     }
 
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; overflow: hidden; text-overflow: ellipsis; }
     thead th { background: #f9fafb; text-align: left; }
     .right { text-align: right; }
+
+    /* Larguras das colunas */
+    .col-venc { width: 10%; }
+    .col-pag { width: 10%; }
+    .col-item { width: 12%; }
+    .col-desc { width: 15%; }
+    .col-bank { width: 12%; }
+    .col-method { width: 8%; }
+    .col-val { width: 12%; }
+    .col-actions { width: 21%; }
 
     .btn-sm {
       border: 1px solid #e5e7eb;
@@ -390,6 +407,12 @@ import { BancosService } from '../../services/bancos.service';
       .filters { justify-content: space-between; }
       .cards { grid-template-columns: 1fr; }
     }
+    @media (max-width: 640px) {
+    .col-method { display: none; }
+    }
+    @media (min-width: 641px) and (max-width: 980px) {
+      .col-method { display: none; } /* opcional: esconda em tablet também */
+    }
   `]
 })
 export class DashboardComponent {
@@ -409,6 +432,8 @@ export class DashboardComponent {
 
   bancosAll = signal<Banco[]>([]);
   bancosAtivos = signal<Banco[]>([]);
+
+  paymentLabel = PAYMENT_METHOD_LABEL;
 
   bancosSelect = computed(() => {
     const ativos = this.bancosAtivos();
