@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
 import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
 import { Despesa } from '../../models/despesa.model';
@@ -299,13 +298,23 @@ export class RelatorioAnualComponent {
   reload(): void {
     this.loading.set(true);
 
-    const calls = Array.from({ length: 12 }).map((_, i) =>
-      this.despesasService.listarPorMes(this.ano, i + 1)
-    );
+    this.despesasService.listarPorAno(this.ano).subscribe((despesas: Despesa[]) => {
+      // Agrupa despesas por mês (1..12)
+      const gruposPorMes = new Map<number, Despesa[]>();
+      for (let m = 1; m <= 12; m++) {
+        gruposPorMes.set(m, []);
+      }
 
-    forkJoin(calls).subscribe((meses: Despesa[][]) => {
-      const rows: MesResumo[] = meses.map((list, idx) => {
+      despesas.forEach(d => {
+        const mes = new Date(d.dataVencimento).getMonth() + 1; // 1..12
+        if (mes >= 1 && mes <= 12) {
+          gruposPorMes.get(mes)!.push(d);
+        }
+      });
+
+      const rows: MesResumo[] = Array.from({ length: 12 }).map((_, idx) => {
         const mes = idx + 1;
+        const list = gruposPorMes.get(mes) ?? [];
 
         // filtro por tipo (opcional)
         const filtrada = this.tipo === 'TODOS'
@@ -337,7 +346,11 @@ export class RelatorioAnualComponent {
   }
 
   tipoDoItem(itemId: string): ItemTipo | '—' {
-    return this.itens().find(i => i.id === Number(itemId))?.tipo ?? '—';
+    return this.itens().find(i => i.id.toString() === String(itemId))?.tipo ?? '—';
+  }
+
+  atividadeDoItem(itemId: string): string {
+    return this.itens().find(i => i.id.toString() === String(itemId))?.atividade ?? '—';
   }
 
   mesLabel(m: number): string {
@@ -383,13 +396,9 @@ export class RelatorioAnualComponent {
   }
 
   private listarAno(): Promise<Despesa[]> {
-    const calls = Array.from({ length: 12 }).map((_, i) =>
-      new Promise<Despesa[]>((resolve) => {
-        this.despesasService.listarPorMes(this.ano, i + 1).subscribe(list => resolve(list));
-      })
-    );
-
-    return Promise.all(calls).then(all => all.flat());
+    return new Promise<Despesa[]>((resolve) => {
+      this.despesasService.listarPorAno(this.ano).subscribe(list => resolve(list));
+    });
   }
 
   async exportarDetalhado(formato: 'txt' | 'pdf' | 'xls'): Promise<void> {
@@ -403,17 +412,29 @@ export class RelatorioAnualComponent {
     filtrada.sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''));
 
     const user = this.auth.getUser();
+    const totalRegistros = filtrada.length;
+    const totalValor = filtrada.reduce((acc, d) => acc + Number(d.valor ?? 0), 0);
 
     const table: ExportTable = {
       title: 'Relatório Anual Detalhado',
       subtitle: `Ano: ${this.ano} | Tipo: ${this.tipo}`,
       columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
-      rows: filtrada.map(d => ([ /* ... */])),
+      rows: filtrada.map(d => ([
+        d.dataVencimento ?? '',
+        d.dataPagamento ?? '',
+        this.tipoDoItem(d.itemId),
+        d.itemNome ?? '',
+        this.atividadeDoItem(d.itemId),
+        d.descricao ?? '',
+        d.bancoPagamento ?? '',
+        Number(d.valor ?? 0).toFixed(2),
+        d.dataPagamento ? 'Paga' : 'Pendente'
+      ])),
       fileBaseName: `relatorio_anual_detalhado_${this.ano}`,
       pdfHeader: user ? {
         name: user.nome,
         email: user.email,
-        analyticsLine: `Ano: ${this.ano} | Total: ...`
+        analyticsLine: `Ano: ${this.ano} | Registros: ${totalRegistros} | Total: R$ ${totalValor.toFixed(2)}`
       } : undefined
     };
 

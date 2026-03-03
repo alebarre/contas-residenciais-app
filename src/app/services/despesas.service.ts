@@ -14,6 +14,11 @@ export class DespesasService {
     return this.http.get<Despesa[]>('/api/expenses', { params });
   }
 
+  listarPorAno(ano: number): Observable<Despesa[]> {
+    const params = new HttpParams().set('year', String(ano));
+    return this.http.get<Despesa[]>('/api/expenses', { params });
+  }
+
   criar(payload: {
     itemId: string;
     dataVencimento: string;

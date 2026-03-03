@@ -36,8 +36,8 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
     <section class="cards" *ngIf="resumo() as r">
       <div class="card">
-        <div class="k">Contas do mês</div>
-        <div class="v">{{ r.contasDoMes }}</div>
+        <div class="k">Contas nesse mês</div>
+        <div class="v_ContasMes">{{ r.contasDoMes }}</div>
       </div>
 
       <div class="card">
@@ -158,7 +158,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
               <td class="col-bank">{{ d.bancoPagamento }}</td>
               <td class="col-method">{{ paymentLabel[d.paymentMethod] }}</td>
               <td class="col-val">{{ d.valor | currency:'BRL' }}</td>
-              <td class="col-actions">
+              <td class="col-actions ">
                 <button type="button" class="btn-sm" (click)="editar(d)">Editar</button>
                 <button type="button" class="btn-sm danger" (click)="excluir(d)">Excluir</button>
               </td>
@@ -232,7 +232,8 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
       padding: 12px;
       background: #fff;
     }
-    .k { color: #6b7280; font-size: 12px; }
+    .k { color: #6b7280; font-size: 16px; font-weight: 900;}
+    .v_ContasMes { font-size: 42px; font-weight: 700; }
     .v { font-size: 22px; font-weight: 700; }
     .v.small { font-size: 14px; font-weight: 600; }
     .muted { color: #6b7280; font-weight: 500; font-size: 12px; }
