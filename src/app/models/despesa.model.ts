@@ -23,5 +23,5 @@ export interface Despesa {
 
   valor: number;
 
-  paymentMethod: PaymentMethod; // ✅ NOVO
+  paymentMethod: PaymentMethod;
 }

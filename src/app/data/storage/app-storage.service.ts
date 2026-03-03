@@ -46,11 +46,11 @@ export class AppStorageService {
   getAll(): AppStorage {
     const base = this.storage.get<any>(KEY, {});
 
-    // Migração: itens antigos salvos em chave separada "itens"
+    // Itens antigos salvos em chave separada "itens"
     const legacyItensRaw = localStorage.getItem('itens');
     const legacyItens: Item[] = legacyItensRaw ? (JSON.parse(legacyItensRaw) as Item[]) : [];
 
-    // Mantém o que já existe na KEY, mas garante defaults
+    // Mantém o que já existe na KEY
     const next: AppStorage = {
       ...DEFAULT_STORAGE,
       ...base,

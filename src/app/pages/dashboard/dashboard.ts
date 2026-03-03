@@ -620,7 +620,7 @@ export class DashboardComponent {
     const ano = this.ano();
     const mes = this.mes();
 
-    // ✅ 1 chamada única: summary (inclui historicoMensal) + expenses do mês
+    //1 chamada única: summary (inclui historicoMensal) + expenses do mês
     this.dashboardService.getDashboard(ano, mes).subscribe((payload) => {
       this.despesas.set(payload.expenses ?? []);
       this.resumo.set(payload.summary);

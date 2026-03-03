@@ -34,14 +34,14 @@ export class DespesasService {
       dataPagamento: payload.dataPagamento ?? null,
       descricao: payload.descricao ?? '',
       bancoCode: payload.bancoCode ?? null,
-      paymentMethod: payload.paymentMethod, // ✅ NOVO
+      paymentMethod: payload.paymentMethod,
       valor: Number(payload.valor)
     };
 
     return this.http.post<Despesa>('/api/expenses', body);
   }
 
-  // ✅ Edição inline do dashboard: NÃO altera paymentMethod (Solução 1)
+  // Edição inline do dashboard: NÃO altera paymentMethod (Solução 1)
   atualizar(despesa: Despesa): Observable<Despesa> {
     const body: any = {
       itemId: despesa.itemId,

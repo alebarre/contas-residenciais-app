@@ -87,11 +87,9 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
       z-index: 199;
     }
 
-    /* ── Responsivo ─────────────────────────────────────── */
     @media (max-width: 767px) {
       .shell {
-        /* no mobile o sidebar está fora do fluxo (position:fixed),
-           então o conteúdo ocupa toda a largura */
+        /* no mobile  */
         display: block;
       }
 

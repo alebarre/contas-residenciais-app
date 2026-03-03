@@ -4,6 +4,6 @@ export interface Item {
   id: number;
   tipo: ItemTipo;
   nome: string;
-  atividade: string; // ✅ novo campo
+  atividade: string; 
   ativo: boolean;
 }
