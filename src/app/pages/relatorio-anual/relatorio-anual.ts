@@ -5,7 +5,7 @@ import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
 import { Despesa } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
-import { ExportService, ExportTable } from '../../services/export.service';
+import { ExportService, ExportTable, KpiCard } from '../../services/export.service';
 import { ProfileService } from '../../services/profile.service';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -176,9 +176,9 @@ interface MesResumo {
     .kpi.paid { background: #f0fdf4; border-color: #bbf7d0; }
     .kpi.pending { background: #fffbeb; border-color: #fde68a; }
 
-    .k { color: #6b7280; font-size: 12px; margin-bottom: 6px; }
-    .v { font-size: 18px; font-weight: 800; }
-    .muted { color: #6b7280; font-weight: 500; }
+    .k { color: #6b7280; font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+    .v { font-size: 22px; font-weight: 700; }
+    .muted { color: #6b7280; font-weight: 500; font-size: 12px; }
 
     .loading {
       padding: 14px;
@@ -387,7 +387,27 @@ export class RelatorioAnualComponent {
         name: user.nome,
         email: user.email,
         analyticsLine: `Ano: ${this.ano} | Total: ${totalQtd} (R$ ${totalVal.toFixed(2)}) | Pagas: ${pagasQtd} (R$ ${pagasVal.toFixed(2)}) | Pendentes: ${pendQtd} (R$ ${pendVal.toFixed(2)})`
-      } : undefined
+      } : undefined,
+      kpis: [
+        {
+          label: 'Total (ano)',
+          value: totalQtd,
+          subtitle: `R$ ${totalVal.toFixed(2)}`,
+          type: 'default'
+        },
+        {
+          label: 'Pagas',
+          value: pagasQtd,
+          subtitle: `R$ ${pagasVal.toFixed(2)}`,
+          type: 'paid'
+        },
+        {
+          label: 'Pendentes',
+          value: pendQtd,
+          subtitle: `R$ ${pendVal.toFixed(2)}`,
+          type: 'pending'
+        }
+      ]
     };
 
     if (formato === 'txt') this.exportService.exportTxt(table);

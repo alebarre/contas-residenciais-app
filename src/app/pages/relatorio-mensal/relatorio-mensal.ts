@@ -6,7 +6,7 @@ import { ItensService } from '../../services/itens.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Despesa, PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
-import { ExportService, ExportTable } from '../../services/export.service';
+import { ExportService, ExportTable, KpiCard } from '../../services/export.service';
 import { ToastService } from '../../services/toast.service';
 
 type StatusFiltro = 'TODAS' | 'PAGAS' | 'PENDENTES';
@@ -54,17 +54,15 @@ type TipoFiltro = 'TODOS' | ItemTipo;
             <div class="k">Total de registros</div>
             <div class="v">{{ filtradas().length }}</div>
           </div>
-          <div class="kpi">
-            <div class="k">Total (R$)</div>
-            <div class="v">{{ totalValor() | currency:'BRL' }}</div>
-          </div>
-          <div class="kpi">
+          <div class="kpi paid">
             <div class="k">Pagas</div>
             <div class="v">{{ totalPagasQtd() }}</div>
+            <div class="muted">{{ totalValorPagas() | currency:'BRL' }}</div>
           </div>
-          <div class="kpi">
+          <div class="kpi pending">
             <div class="k">Pendentes</div>
             <div class="v">{{ totalPendentesQtd() }}</div>
+            <div class="muted">{{ totalValorPendentes() | currency:'BRL' }}</div>
           </div>
         </div>
       </div>
@@ -120,9 +118,13 @@ type TipoFiltro = 'TODOS' | ItemTipo;
     select { padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; }
 
     .card { border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:12px; margin-bottom:12px; }
-    .card-head { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; justify-content:space-between; }
-    .kpi .k { color:#6b7280; font-size:12px; }
-    .kpi .v { font-size:18px; font-weight:700; }
+    .card-head { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; flex-wrap:wrap; }
+    .kpi { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; }
+    .kpi.paid { background: #f0fdf4; border-color: #bbf7d0; }
+    .kpi.pending { background: #fffbeb; border-color: #fde68a; }
+    .kpi .k { color:#6b7280; font-size:16px; font-weight: 900; margin-bottom: 6px; }
+    .kpi .v { font-size:22px; font-weight:700; }
+    .kpi .muted { color: #6b7280; font-weight: 500; font-size: 12px; }
 
     .export { display:flex; gap:8px; padding:12px; justify-content:flex-end; border-top:1px solid #e5e7eb; }
     .btn_export { border:1px solid #e5e7eb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; background-color: #6b7280; color: #fff;}
@@ -226,6 +228,25 @@ export class RelatorioMensalComponent {
         email: user.email,
         analyticsLine: `Contas: ${this.filtradas().length} | Total: R$ ${this.totalValor().toFixed(2)}`
       } : undefined,
+      kpis: [
+        {
+          label: 'Total de registros',
+          value: this.filtradas().length,
+          type: 'default'
+        },
+        {
+          label: 'Pagas',
+          value: this.totalPagasQtd(),
+          subtitle: `R$ ${this.totalValorPagas().toFixed(2)}`,
+          type: 'paid'
+        },
+        {
+          label: 'Pendentes',
+          value: this.totalPendentesQtd(),
+          subtitle: `R$ ${this.totalValorPendentes().toFixed(2)}`,
+          type: 'pending'
+        }
+      ],
       fileBaseName: `relatorio_mensal_${this.ano}_${mm}`
     };
 
@@ -246,5 +267,13 @@ export class RelatorioMensalComponent {
 
   totalPendentesQtd = computed(() =>
     this.filtradas().filter(d => !d.dataPagamento).length
+  );
+
+  totalValorPagas = computed(() =>
+    this.filtradas().filter(d => !!d.dataPagamento).reduce((acc, d) => acc + Number(d.valor ?? 0), 0)
+  );
+
+  totalValorPendentes = computed(() =>
+    this.filtradas().filter(d => !d.dataPagamento).reduce((acc, d) => acc + Number(d.valor ?? 0), 0)
   );
 }

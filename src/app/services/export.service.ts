@@ -7,7 +7,16 @@ export interface PdfHeader {
   name: string;
   email: string;
   analyticsLine?: string;
-}export interface ExportTable {
+}
+
+export interface KpiCard {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+  type?: 'default' | 'paid' | 'pending'; // para colorir
+}
+
+export interface ExportTable {
   title: string;
   subtitle?: string;
   columns: string[];
@@ -16,6 +25,9 @@ export interface PdfHeader {
 
   /** Cabeçalho extra (somente PDF) */
   pdfHeader?: PdfHeader;
+
+  /** Cards KPI (somente PDF) */
+  kpis?: KpiCard[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -88,6 +100,57 @@ export class ExportService {
       doc.setFontSize(10);
       doc.text(data.subtitle, marginLeft, y);
       y += 14;
+    }
+
+    // ====== KPI CARDS (opcional) ======
+    if (data.kpis && data.kpis.length > 0) {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const availableWidth = pageWidth - marginLeft - marginRight;
+      const kpiWidth = availableWidth / Math.min(3, data.kpis.length);
+      const kpiHeight = 44;
+
+      data.kpis.forEach((kpi, idx) => {
+        const kpiX = marginLeft + idx * kpiWidth;
+        const kpiY = y;
+
+        // Cores baseadas no tipo
+        let bgColor = [255, 255, 255]; // branco padrão
+        let borderColor = [229, 231, 235]; // borda cinza
+        if (kpi.type === 'paid') {
+          bgColor = [240, 253, 244]; // #f0fdf4 (verde claro)
+          borderColor = [187, 247, 208]; // #bbf7d0 (verde)
+        } else if (kpi.type === 'pending') {
+          bgColor = [255, 251, 235]; // #fffbeb (amarelo claro)
+          borderColor = [253, 230, 138]; // #fde68a (amarelo)
+        }
+
+        // Desenha retângulo (card)
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+        doc.rect(kpiX + 3, kpiY, kpiWidth - 6, kpiHeight, 'FD');
+
+        // Desenha label (K)
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(10);
+        doc.setFont('', 'bold');
+        doc.text(kpi.label, kpiX + 8, kpiY + 13);
+
+        // Desenha valor (V)
+        doc.setTextColor(17, 24, 39);
+        doc.setFontSize(16);
+        doc.setFont('', 'bold');
+        doc.text(String(kpi.value), kpiX + 8, kpiY + 28);
+
+        // Desenha subtítulo (optional)
+        if (kpi.subtitle) {
+          doc.setTextColor(107, 114, 128);
+          doc.setFontSize(8);
+          doc.setFont('', 'normal');
+          doc.text(kpi.subtitle, kpiX + 8, kpiY + 40);
+        }
+      });
+
+      y += kpiHeight + 14;
     }
 
     const generatedAt = new Date();
