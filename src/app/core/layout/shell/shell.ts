@@ -72,7 +72,8 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
       font-size: 16px;
     }
 
-    .title { font-weight: 600; text-align: center; }
+
+    .title { font-weight: bolder; font-size: 40px; color: #98a3b9; text-align: center; }
     .spacer { width: 24px; }
 
     .page {
@@ -91,6 +92,10 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
       .shell {
         /* no mobile  */
         display: block;
+      }
+
+      .title {
+        font-size: 30px;
       }
 
       .page {

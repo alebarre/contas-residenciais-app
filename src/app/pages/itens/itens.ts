@@ -17,8 +17,7 @@ import { forkJoin } from 'rxjs';
     <div class="wrap">
       <div class="header">
         <div>
-          <h2>Cadastros</h2>
-          <p class="sub">Itens e bancos (catálogo via API)</p>
+          <h2>Cadastre aqui itens para usar nas despesas</h2>
         </div>
 
         <div class="tabs" role="tablist">

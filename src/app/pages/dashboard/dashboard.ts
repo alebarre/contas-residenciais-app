@@ -3,8 +3,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { DespesasService } from '../../services/despesas.service';
+import { ItensService } from '../../services/itens.service';
 import { DashboardResumo } from '../../models/dashboard.model';
 import { Despesa } from '../../models/despesa.model';
+import { Item } from '../../models/item.model';
 import { Banco } from '../../models/banco.model';
 import { FormsModule } from '@angular/forms';
 import { ConfirmService } from '../../services/confirm.service';
@@ -139,25 +141,28 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
         <table>
           <thead>
             <tr>
+              <th class="col-item">Item</th>
               <th class="col-venc">Vencimento</th>
               <th class="col-pag">Pagamento</th>
-              <th class="col-item">Item</th>
-              <th class="col-desc">Descrição</th>
               <th class="col-bank">Banco</th>
               <th class="col-method">Forma</th>
               <th class="col-val right">Valor</th>
+              <th class="col-desc">Descrição</th>
               <th class="col-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let d of despesas()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
+              <td class="col-item col-item-estilo">
+                <div>{{ d.itemNome }}</div>
+                <div class="item-atividade" *ngIf="getAtividadeDoItem(d.itemId)">{{ getAtividadeDoItem(d.itemId) }}</div>
+              </td>
               <td class="col-venc">{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
               <td class="col-pag">{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
-              <td class="col-item">{{ d.itemNome }}</td>
-              <td class="col-desc">{{ d.descricao }}</td>
               <td class="col-bank">{{ d.bancoPagamento }}</td>
               <td class="col-method">{{ paymentLabel[d.paymentMethod] }}</td>
               <td class="col-val">{{ d.valor | currency:'BRL' }}</td>
+              <td class="col-desc">{{ d.descricao }}</td>
               <td class="col-actions ">
                 <button type="button" class="btn-sm" (click)="editar(d)">Editar</button>
                 <button type="button" class="btn-sm danger" (click)="excluir(d)">Excluir</button>
@@ -266,14 +271,28 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
     .right { text-align: right; }
 
     /* Larguras das colunas */
-    .col-venc { width: 10%; }
-    .col-pag { width: 10%; }
-    .col-item { width: 12%; }
+    .col-item { width: 17%; }
+    .col-venc { width: 8%; }
+    .col-pag { width: 8%; }
     .col-desc { width: 15%; }
-    .col-bank { width: 12%; }
+    .col-bank { width: 11%; }
     .col-method { width: 8%; }
     .col-val { width: 12%; }
     .col-actions { width: 21%; }
+
+    .col-item-estilo {
+      font-weight: bolder;
+      font-size: 15px;
+      color: #111827;
+
+    }
+
+    .item-atividade {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+      font-weight: normal;
+    }
 
     .btn-sm {
       border: 1px solid #e5e7eb;
@@ -420,6 +439,7 @@ export class DashboardComponent {
   private router = inject(Router);
   private dashboardService = inject(DashboardService);
   private despesasService = inject(DespesasService);
+  private itensService = inject(ItensService);
   private bancosService = inject(BancosService);
   private confirmService = inject(ConfirmService);
   private toast = inject(ToastService);
@@ -430,6 +450,7 @@ export class DashboardComponent {
 
   resumo = signal<DashboardResumo | null>(null);
   despesas = signal<Despesa[]>([]);
+  itens = signal<Item[]>([]);
 
   bancosAll = signal<Banco[]>([]);
   bancosAtivos = signal<Banco[]>([]);
@@ -472,12 +493,19 @@ export class DashboardComponent {
   constructor() {
     this.reload();
 
+    // itens
+    this.itensService.listar().subscribe(list => this.itens.set(list ?? []));
+
     // bancos (catálogo via API + overrides locais)
     this.bancosService.listarTodos().subscribe(list => {
       this.bancosAll.set(list);
       this.syncBancoNomeFromCode();
     });
     this.bancosService.listarAtivos().subscribe(list => this.bancosAtivos.set(list));
+  }
+
+  getAtividadeDoItem(itemId: string): string {
+    return this.itens().find(i => i.id.toString() === String(itemId))?.atividade ?? '';
   }
 
   novaDespesa(): void {
