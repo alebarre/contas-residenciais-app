@@ -71,11 +71,8 @@ type TipoFiltro = 'TODOS' | ItemTipo;
         <table>
           <thead>
             <tr>
-              <th>Vencimento</th>
-              <th>Pagamento</th>
-              <th>Tipo</th>
               <th>Item</th>
-              <th>Atividade</th>
+              <th>Tipo</th>
               <th>Descrição</th>
               <th>Banco</th>
               <th class="right">Valor</th>
@@ -85,11 +82,8 @@ type TipoFiltro = 'TODOS' | ItemTipo;
 
           <tbody>
             <tr *ngFor="let d of filtradas()">
-              <td>{{ d.dataVencimento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ d.dataPagamento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ tipoDoItem(d.itemId) }}</td>
               <td>{{ d.itemNome }}</td>
-              <td>{{ atividadeDoItem(d.itemId) }}</td>
+              <td>{{ tipoDoItem(d.itemId) }}</td>
               <td>{{ d.descricao }}</td>
               <td>{{ d.bancoPagamento }}</td>
               <td class="right">{{ d.valor | currency:'BRL' }}</td>
@@ -210,16 +204,12 @@ export class RelatorioMensalComponent {
     const table: ExportTable = {
       title: 'Relatório Mensal',
       subtitle: `Mês: ${mm}/${this.ano} | Status: ${this.status} | Tipo: ${this.tipo}`,
-      columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Forma', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
+      columns: ['Item', 'Forma pgto.', 'Tipo do item', 'Descrição', 'Valor (R$)', 'Status'],
       rows: this.filtradas().map(d => ([
-        d.dataVencimento,
-        d.dataPagamento ?? '',
+        d.itemNome,
         PAYMENT_METHOD_LABEL[d.paymentMethod],
         this.tipoDoItem(d.itemId),
-        d.itemNome,
-        this.atividadeDoItem(d.itemId),
         d.descricao,
-        d.bancoPagamento ?? '',
         Number(d.valor ?? 0).toFixed(2),
         d.dataPagamento ? 'Paga' : 'Pendente'
       ])),

@@ -51,51 +51,59 @@ export class ExportService {
     const marginLeft = 40;
     const marginRight = 40;
 
-    let y = 32;
+    let y = 28;
 
-    // ====== HEADER (perfil + analytics) ======
-    if (data.pdfHeader) {
-      const header = data.pdfHeader;
+    // ====== HEADER — two-column compact layout ======
+    // Left : report title + subtitle
+    // Right: user name + email + analytics line
+    {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const colMid = pageWidth / 2;
 
-      const marginLeft = 40;
-      const marginRight = 40;
-
+      // --- LEFT: title ---
       doc.setTextColor(17, 24, 39);
-      doc.setFontSize(12);
-      doc.text(header.name ?? '', marginLeft, y + 14);
+      doc.setFontSize(16);
+      doc.setFont('', 'bold');
+      doc.text(String(data.title ?? ''), marginLeft, y + 2);
 
-      doc.setTextColor(107, 114, 128);
-      doc.setFontSize(10);
-      doc.text(header.email ?? '', marginLeft, y + 30);
-
-      y = y + 44;
-
-      if (header.analyticsLine) {
-        doc.setTextColor(17, 24, 39);
-        doc.setFontSize(10);
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const maxWidth = pageWidth - marginLeft - marginRight;
-        const lines = doc.splitTextToSize(header.analyticsLine, maxWidth);
-        doc.text(lines, marginLeft, y);
-
-        y += (lines.length * 12) + 10;
-      } else {
-        y += 8;
+      // --- LEFT: subtitle ---
+      if (data.subtitle) {
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(9);
+        doc.setFont('', 'normal');
+        doc.text(data.subtitle, marginLeft, y + 15);
       }
-    }
 
-    // ====== TÍTULO/SUBTÍTULO  ======
-    doc.setTextColor(17, 24, 39);
-    doc.setFontSize(14);
-    doc.text(String(data.title ?? ''), marginLeft, y);
-    y += 18;
+      // --- RIGHT: user info ---
+      if (data.pdfHeader) {
+        const header = data.pdfHeader;
 
-    if (data.subtitle) {
-      doc.setTextColor(107, 114, 128);
-      doc.setFontSize(10);
-      doc.text(data.subtitle, marginLeft, y);
-      y += 14;
+        doc.setTextColor(17, 24, 39);
+        doc.setFontSize(11);
+        doc.setFont('', 'bold');
+        doc.text(header.name ?? '', colMid, y + 2);
+
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(9);
+        doc.setFont('', 'normal');
+        doc.text(header.email ?? '', colMid, y + 14);
+
+        if (header.analyticsLine) {
+          doc.setTextColor(17, 24, 39);
+          doc.setFontSize(9);
+          doc.setFont('', 'bold');
+          const maxRight = pageWidth - marginRight - colMid;
+          const wrapped = doc.splitTextToSize(header.analyticsLine, maxRight);
+          doc.text(wrapped, colMid, y + 26);
+        }
+      }
+
+      // separator line
+      y += 36;
+      doc.setDrawColor(229, 231, 235);
+      doc.setLineWidth(0.5);
+      doc.line(marginLeft, y, pageWidth - marginRight, y);
+      y += 10;
     }
 
     // ====== KPI CARDS  ======

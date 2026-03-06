@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DespesasService } from '../../services/despesas.service';
 import { ItensService } from '../../services/itens.service';
-import { Despesa } from '../../models/despesa.model';
+import { Despesa, PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 import { Item, ItemTipo } from '../../models/item.model';
 import { ExportService, ExportTable, KpiCard } from '../../services/export.service';
 import { ProfileService } from '../../services/profile.service';
@@ -438,15 +438,13 @@ export class RelatorioAnualComponent {
     const table: ExportTable = {
       title: 'Relatório Anual Detalhado',
       subtitle: `Ano: ${this.ano} | Tipo: ${this.tipo}`,
-      columns: ['Vencimento', 'Pagamento', 'Tipo', 'Item', 'Atividade', 'Descrição', 'Banco', 'Valor (R$)', 'Status'],
+      columns: ['Mês/Ano', 'Item', 'Forma pgto.', 'Tipo do item', 'Descrição', 'Valor (R$)', 'Status'],
       rows: filtrada.map(d => ([
-        d.dataVencimento ?? '',
-        d.dataPagamento ?? '',
-        this.tipoDoItem(d.itemId),
+        new Date(d.dataPagamento || d.dataVencimento).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
         d.itemNome ?? '',
-        this.atividadeDoItem(d.itemId),
+        PAYMENT_METHOD_LABEL[d.paymentMethod],
+        this.tipoDoItem(d.itemId),
         d.descricao ?? '',
-        d.bancoPagamento ?? '',
         Number(d.valor ?? 0).toFixed(2),
         d.dataPagamento ? 'Paga' : 'Pendente'
       ])),
