@@ -86,7 +86,26 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
       <div class="list-header">
         <h3>Contas cadastradas no mês</h3>
-        <div class="muted">{{ despesas().length }} registro(s)</div>
+        <div class="muted">{{ despesasVisiveis().length }} registro(s)</div>
+      </div>
+
+      <div class="search-row">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Buscar por item, banco, descrição..."
+          [value]="despesasBusca()"
+          (input)="despesasBusca.set(($any($event.target).value || '').toString())"
+        />
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="despesasBusca.set('')"
+          [disabled]="!despesasBusca()"
+        >
+          Limpar
+        </button>
+        <span *ngIf="despesasBusca()" class="muted">{{ despesasVisiveis().length }} / {{ despesas().length }}</span>
       </div>
 
       <div class="list-header">
@@ -137,7 +156,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
       </div>
 
-      <div class="table-wrap" *ngIf="despesas().length; else empty">
+      <div class="table-wrap" *ngIf="despesasVisiveis().length; else empty">
         <table>
           <thead>
             <tr>
@@ -152,7 +171,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let d of despesas()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
+            <tr *ngFor="let d of despesasVisiveis()" [class.row-paid]="!!d.dataPagamento" [class.row-pending]="!d.dataPagamento">
               <td class="col-item col-item-estilo">
                 <div>{{ d.itemNome }}</div>
                 <div class="item-atividade" *ngIf="getAtividadeDoItem(d.itemId)">{{ getAtividadeDoItem(d.itemId) }}</div>
@@ -174,7 +193,12 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
       <ng-template #empty>
         <div class="empty">
-          Nenhuma despesa cadastrada em {{ mesLabel() }}/{{ ano() }}.
+          <ng-container *ngIf="despesasBusca(); else semRegistros">
+            Nenhuma despesa encontrada para "{{ despesasBusca() }}".
+          </ng-container>
+          <ng-template #semRegistros>
+            Nenhuma despesa cadastrada em {{ mesLabel() }}/{{ ano() }}.
+          </ng-template>
         </div>
       </ng-template>
     </section>
@@ -253,6 +277,30 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
 
     .list { margin-top: 12px; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+    .btn-ghost {
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .table-wrap {
       border: 1px solid #e5e7eb;
@@ -476,6 +524,20 @@ export class DashboardComponent {
 
   pagasTotal = computed(() => this.pagas().reduce((acc, d) => acc + (d.valor ?? 0), 0));
   pendentesTotal = computed(() => this.pendentes().reduce((acc, d) => acc + (d.valor ?? 0), 0));
+
+  despesasBusca = signal<string>('');
+
+  despesasVisiveis = computed(() => {
+    const q = this.despesasBusca().trim().toLowerCase();
+    if (!q) return this.despesas();
+    return this.despesas().filter(d => {
+      const item = (d.itemNome ?? '').toLowerCase();
+      const banco = (d.bancoPagamento ?? '').toLowerCase();
+      const desc = (d.descricao ?? '').toLowerCase();
+      const venc = (d.dataVencimento ?? '').toLowerCase();
+      return item.includes(q) || banco.includes(q) || desc.includes(q) || venc.includes(q);
+    });
+  });
 
   editando = signal<Despesa | null>(null);
   editandoOriginal = signal<Despesa | null>(null);

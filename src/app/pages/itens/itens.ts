@@ -64,6 +64,25 @@ import { forkJoin } from 'rxjs';
           </div>
         </form>
 
+        <div class="search-row">
+          <input
+            type="text"
+            class="input"
+            placeholder="Buscar item por nome, tipo ou atividade..."
+            [value]="itensBusca()"
+            (input)="itensBusca.set(($any($event.target).value || '').toString())"
+          />
+          <button
+            type="button"
+            class="btn btn-ghost"
+            (click)="itensBusca.set('')"
+            [disabled]="!itensBusca()"
+          >
+            Limpar
+          </button>
+          <span class="muted">{{ itensVisiveis().length }} / {{ itens().length }}</span>
+        </div>
+
         <div class="list">
           <table>
             <thead>
@@ -76,7 +95,7 @@ import { forkJoin } from 'rxjs';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of itens()">
+              <tr *ngFor="let item of itensVisiveis()">
                 <td class="col-tipo">{{ item.tipo }}</td>
                 <td class="col-nome">{{ item.nome }}</td>
                 <td class="col-atividade">{{ item.atividade }}</td>
@@ -109,7 +128,9 @@ import { forkJoin } from 'rxjs';
             </tbody>
           </table>
 
-          <div class="empty" *ngIf="!itens().length">Nenhum item cadastrado.</div>
+          <div class="empty" *ngIf="!itensVisiveis().length">
+            {{ itens().length ? 'Nenhum item encontrado para "' + itensBusca() + '".' : 'Nenhum item cadastrado.' }}
+          </div>
         </div>
       </ng-container>
 
@@ -351,6 +372,38 @@ import { forkJoin } from 'rxjs';
         border-radius: 10px;
       }
 
+      .search-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .search-row .input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-sizing: border-box;
+        background: #fff;
+      }
+      .btn-ghost {
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        padding: 10px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .btn-ghost:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .muted {
+        color: #6b7280;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
       .banks h3 {
         margin: 0 0 2px;
       }
@@ -413,6 +466,7 @@ export class ItensComponent {
   bancos = signal<Banco[]>([]);
   bancosLoading = signal<boolean>(false);
   bancoBusca = signal<string>('');
+  itensBusca = signal<string>('');
   aba = signal<'itens' | 'bancos'>('itens');
   editando: Item | null = null;
 
@@ -456,6 +510,17 @@ export class ItensComponent {
         this.toastService.error('Não foi possível atualizar a lista de bancos.');
       },
       complete: () => this.bancosLoading.set(false),
+    });
+  }
+
+  itensVisiveis(): Item[] {
+    const q = this.itensBusca().trim().toLowerCase();
+    if (!q) return this.itens();
+    return this.itens().filter((item) => {
+      const nome = (item.nome ?? '').toLowerCase();
+      const tipo = (item.tipo ?? '').toLowerCase();
+      const atividade = (item.atividade ?? '').toLowerCase();
+      return nome.includes(q) || tipo.includes(q) || atividade.includes(q);
     });
   }
 

@@ -67,7 +67,7 @@ import { PaymentMethod, PAYMENT_METHOD_LABEL, Despesa } from '../../models/despe
           </div>
 
           <div class="field full">
-            <label>Descrição</label>
+            <label>Descrição <span style="color:#9ca3af">(opcional)</span></label>
             <input type="text" formControlName="descricao" />
           </div>
         </div>
@@ -123,7 +123,7 @@ export class DespesaFormComponent {
     bancoCode: [null as number | null],
     paymentMethod: ['OUTROS' as PaymentMethod, Validators.required],
     valor: [null as any, Validators.required],
-    descricao: ['', [Validators.required, Validators.minLength(2)]],
+    descricao: [''],
   });
 
   constructor() {
