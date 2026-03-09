@@ -5,8 +5,8 @@ import { Observable } from 'rxjs';
 import { User } from '../models/user.model';
 
 export type PatchMeRequest = {
-  telefone?: string | null;
-  avatarUrl?: string | null;
+  telefone?: string;
+  avatarUrl?: string;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -31,7 +31,18 @@ export class ProfileService {
   /** Avatar para UI: usa o avatarUrl do user, ou fallback genérico */
   getAvatarOrDefault(user: User): string {
     const avatar = (user.avatarUrl ?? '').trim();
-    return avatar ? avatar : DEFAULT_AVATAR_DATA_URL;
+    return (avatar && avatar !== DEFAULT_AVATAR_DATA_URL) ? avatar : DEFAULT_AVATAR_DATA_URL;
+  }
+
+  /** Retorna true se o user tem avatar personalizado (não é o padrão) */
+  hasCustomAvatar(user: User): boolean {
+    const avatar = (user.avatarUrl ?? '').trim();
+    return !!avatar && avatar !== DEFAULT_AVATAR_DATA_URL;
+  }
+
+  /** URL do avatar genérico — usado para "remover" o avatar no backend */
+  get defaultAvatarUrl(): string {
+    return DEFAULT_AVATAR_DATA_URL;
   }
 }
 

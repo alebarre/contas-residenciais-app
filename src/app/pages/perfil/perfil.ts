@@ -24,15 +24,34 @@ import { AuthService } from '../../core/auth/auth.service';
       <div class="card" *ngIf="user() as u">
         <div class="grid">
           <div class="avatar">
-            <img [src]="avatarUrl()" alt="Avatar" />
-            <label class="btn-sm">
-              Alterar avatar
-              <input type="file" accept="image/*" (change)="onFile($event)" hidden />
+            <div class="avatar-img-wrap">
+              <img [src]="avatarUrl()" alt="Avatar" [class.uploading]="saving()" />
+              <div class="avatar-overlay" *ngIf="saving()">⏳</div>
+            </div>
+
+            <div class="avatar-rules">
+              <span class="rule-ok">✔ JPG, PNG, WEBP, GIF</span>
+              <span class="rule-ok">✔ Máx. 140 KB</span>
+              <span class="rule-ok">✔ Quadrado recomendado</span>
+            </div>
+
+            <label class="btn-sm" [class.disabled]="saving()">
+              {{ saving() ? 'Enviando...' : 'Alterar avatar' }}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                (change)="onFile($event)"
+                [disabled]="saving()"
+                hidden
+              />
             </label>
-            <button type="button" class="btn-sm danger" (click)="removerAvatar()" [disabled]="!hasAvatar()">
+
+            <div class="err" *ngIf="avatarError()">{{ avatarError() }}</div>
+
+            <button type="button" class="btn-sm danger" (click)="removerAvatar()" [disabled]="!hasAvatar() || saving()">
               Remover
             </button>
-            <small class="hint">Avatar/telefone são persistidos no servidor.</small>
+            <small class="hint">Altere o avatar enviando uma nova imagem.</small>
           </div>
 
           <div class="fields">
@@ -58,7 +77,7 @@ import { AuthService } from '../../core/auth/auth.service';
                 {{ fieldErrorTelefone() }}
               </div>
               <div class="actions">
-                <button type="submit" class="btn primary" [disabled]="form.invalid || saving()">
+                <button type="submit" class="btn primary" [disabled]="form.invalid || saving() || !form.dirty">
                   {{ saving() ? 'Salvando...' : 'Salvar' }}
                 </button>
               </div>
@@ -80,7 +99,30 @@ import { AuthService } from '../../core/auth/auth.service';
     .card { border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:12px; }
     .grid { display:grid; grid-template-columns: 260px 1fr; gap:16px; }
     .avatar { display:grid; gap:10px; align-content:start; }
-    .avatar img { width:160px; height:160px; border-radius:999px; object-fit:cover; border:1px solid #e5e7eb; }
+
+    .avatar-img-wrap { position: relative; width: 160px; height: 160px; }
+    .avatar-img-wrap img {
+      width: 160px; height: 160px;
+      border-radius: 999px;
+      object-fit: cover;
+      border: 1px solid #e5e7eb;
+      transition: opacity .2s;
+    }
+    .avatar-img-wrap img.uploading { opacity: .4; }
+    .avatar-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      pointer-events: none;
+    }
+
+    .avatar-rules {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .rule-ok { font-size: 12px; color: #16a34a; }
+
     .fields { display:grid; gap:10px; }
     .field { display:grid; gap:6px; }
     label { font-size:12px; color:#374151; }
@@ -88,10 +130,15 @@ import { AuthService } from '../../core/auth/auth.service';
     .hint { color:#6b7280; font-size:12px; }
     .actions { margin-top:8px; display:flex; justify-content:flex-end; }
     .btn { border:1px solid #e5e7eb; background:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; }
+    .btn:disabled { background:#f3f4f6; color:#9ca3af; border-color:#d1d5db; cursor:not-allowed; }
     .btn.primary { background:#111827; color:#fff; border-color:#111827; }
+    .btn.primary:disabled { background:#d1d5db; color:#6b7280; border-color:#d1d5db; }
     .btn-sm { border:1px solid #e5e7eb; background:#fff; padding:6px 8px; border-radius:10px; cursor:pointer; width:max-content; }
+    .btn-sm:disabled { background:#f3f4f6; color:#9ca3af; border-color:#d1d5db; cursor:not-allowed; }
     .btn-sm.danger { border-color:#fecaca; }
-    .err { color:#b91c1c; font-size:12px; margin-top:6px; }
+    .btn-sm.danger:disabled { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .btn-sm.disabled { opacity:.6; cursor:not-allowed; }
+    .err { color:#b91c1c; font-size:12px; margin-top:2px; }
     @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
   `]
 })
@@ -106,6 +153,7 @@ export class PerfilComponent {
   avatarUrl = signal<string>('');
   hasAvatar = signal<boolean>(false);
   saving = signal<boolean>(false);
+  avatarError = signal<string>('');
 
   form = this.fb.group({
     telefone: ['', [this.telefoneBrValidator]]
@@ -115,18 +163,20 @@ export class PerfilComponent {
     // Ao entrar no perfil, recarrega do backend (fonte de verdade) e atualiza a sessão
     this.profile.getMe().subscribe({
       next: (u) => {
-        this.auth.setUser(u);
+        this.auth.patchUser(u);
         this.avatarUrl.set(this.profile.getAvatarOrDefault(u));
-        this.hasAvatar.set(!!(u.avatarUrl ?? '').trim());
+        this.hasAvatar.set(this.profile.hasCustomAvatar(u));
         this.form.patchValue({ telefone: u.telefone ?? '' }, { emitEvent: false });
+        this.form.markAsPristine();
       },
       error: () => {
         // fallback: usa o user local, se existir
         const u = this.user();
         if (u) {
           this.avatarUrl.set(this.profile.getAvatarOrDefault(u));
-          this.hasAvatar.set(!!(u.avatarUrl ?? '').trim());
+          this.hasAvatar.set(this.profile.hasCustomAvatar(u));
           this.form.patchValue({ telefone: u.telefone ?? '' }, { emitEvent: false });
+          this.form.markAsPristine();
         }
       }
     });
@@ -149,9 +199,11 @@ export class PerfilComponent {
     const telefoneDigits = telefoneRaw.replace(/\D/g, '');
 
     this.saving.set(true);
-    this.profile.patchMe({ telefone: telefoneDigits || null }).subscribe({
+    // API exige string — envia '' quando vazio (não envia null)
+    this.profile.patchMe({ telefone: telefoneDigits || '' }).subscribe({
       next: (updated) => {
-        this.auth.setUser(updated);
+        this.auth.patchUser(updated);
+        this.form.markAsPristine();
         this.toast.success('Perfil atualizado.');
         this.saving.set(false);
       },
@@ -163,10 +215,11 @@ export class PerfilComponent {
 
         const telMsg = fieldErrors?.find(e => e.field === 'telefone')?.message;
         if (telMsg) {
-          this.fieldErrorTelefone.set(telMsg);
+          const friendly = this.friendlyFieldError('telefone', telMsg);
+          this.fieldErrorTelefone.set(friendly);
           this.form.get('telefone')?.setErrors({ backend: true });
           this.form.get('telefone')?.markAsTouched();
-          this.toast.error(telMsg);
+          this.toast.error(friendly);
           return;
         }
 
@@ -180,9 +233,9 @@ export class PerfilComponent {
     if (!u) return;
 
     this.saving.set(true);
-    this.profile.patchMe({ avatarUrl: null }).subscribe({
+    this.profile.patchMe({ avatarUrl: this.profile.defaultAvatarUrl }).subscribe({
       next: (updated) => {
-        this.auth.setUser(updated);
+        this.auth.patchUser(updated);
         this.avatarUrl.set(this.profile.getAvatarOrDefault(updated));
         this.hasAvatar.set(false);
         this.toast.info('Avatar removido.');
@@ -198,12 +251,28 @@ export class PerfilComponent {
 
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
+    input.value = ''; // reset imediato para permitir reenvio do mesmo arquivo
     if (!file) return;
 
-    // hardening: evita base64 gigante
-    if (file.size > 1_200_000) {
-      this.toast.error('Imagem muito grande. Use até ~1.2MB.');
-      input.value = '';
+    this.avatarError.set('');
+
+    // --- Validação de tipo (MIME real, não só extensão) ---
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      const err = `Formato não permitido: ${file.type || 'desconhecido'}. Use JPG, PNG, WEBP ou GIF.`;
+      this.avatarError.set(err);
+      this.toast.error(err);
+      return;
+    }
+
+    // --- Validação de tamanho: API aceita no máx. 200.000 chars de base64.
+    // base64 infla ~33% + ~26 chars de prefixo → limite seguro = 140 KB ---
+    const MAX_BYTES = 140 * 1024; // 140 KB
+    if (file.size > MAX_BYTES) {
+      const kb = Math.round(file.size / 1024);
+      const err = `Imagem muito grande (${kb} KB). O limite é 140 KB.`;
+      this.avatarError.set(err);
+      this.toast.error(err);
       return;
     }
 
@@ -212,16 +281,24 @@ export class PerfilComponent {
     this.saving.set(true);
     this.profile.patchMe({ avatarUrl: dataUrl }).subscribe({
       next: (updated) => {
-        this.auth.setUser(updated);
+        this.auth.patchUser(updated);
         this.avatarUrl.set(this.profile.getAvatarOrDefault(updated));
         this.hasAvatar.set(true);
         this.toast.success('Avatar atualizado.');
       },
-      error: () => this.toast.error('Não foi possível salvar o avatar.'),
+      error: (err) => {
+        this.saving.set(false);
+        const api = err?.error;
+        const fieldErrors = api?.fieldErrors as Array<{ field: string; message: string }> | undefined;
+        const avatarMsg = fieldErrors?.find(e => e.field === 'avatarUrl')?.message;
+        const msg = avatarMsg
+          ? `Imagem rejeitada pelo servidor: ${avatarMsg}`
+          : (api?.message ?? 'Não foi possível salvar o avatar.');
+        this.avatarError.set(msg);
+        this.toast.error(msg);
+      },
       complete: () => this.saving.set(false)
     });
-
-    input.value = '';
   }
 
   private fileToDataUrl(file: File): Promise<string> {
@@ -256,5 +333,20 @@ export class PerfilComponent {
     const digits = v.replace(/\D/g, '');
     if (!digits) return null; // opcional
     return (digits.length === 10 || digits.length === 11) ? null : { telefoneInvalido: true };
+  }
+
+  /** Converte mensagens técnicas do backend em texto amigável para o usuário. */
+  private friendlyFieldError(field: string, raw: string): string {
+    const m = (raw ?? '').toLowerCase();
+    if (field === 'telefone') {
+      if (m.includes('null') || m.includes('required') || m.includes('string')) {
+        return 'Informe um telefone válido com 10 ou 11 dígitos.';
+      }
+      if (m.includes('length') || m.includes('digits') || m.includes('characters')) {
+        return 'Telefone inválido. Use 10 ou 11 dígitos (com DDD).';
+      }
+    }
+    // fallback: retorna a mensagem original se não houver mapeamento
+    return raw;
   }
 }
