@@ -358,6 +358,14 @@ export class RelatorioAnualComponent {
     return nomes[m - 1] ?? String(m);
   }
 
+  /** Extrai "MM/YYYY" direto da string ISO (YYYY-MM-DD) sem passar por new Date(),
+   *  evitando deslocamento de fuso horário. Usa sempre dataVencimento. */
+  mesAnoFromVencimento(dataVencimento: string): string {
+    const parts = (dataVencimento ?? '').split('-');
+    if (parts.length >= 2) return `${parts[1]}/${parts[0]}`;
+    return dataVencimento ?? '';
+  }
+
   exportar(formato: 'txt' | 'pdf' | 'xls'): void {
     const rows = this.resumoPorMes();
     const user = this.auth.getUser();
@@ -440,7 +448,7 @@ export class RelatorioAnualComponent {
       subtitle: `Ano: ${this.ano} | Tipo: ${this.tipo}`,
       columns: ['Mês/Ano', 'Item', 'Forma pgto.', 'Tipo do item', 'Descrição', 'Valor (R$)', 'Status'],
       rows: filtrada.map(d => ([
-        new Date(d.dataPagamento || d.dataVencimento).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
+        this.mesAnoFromVencimento(d.dataVencimento),
         d.itemNome ?? '',
         PAYMENT_METHOD_LABEL[d.paymentMethod],
         this.tipoDoItem(d.itemId),
