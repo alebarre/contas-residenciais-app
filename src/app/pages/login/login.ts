@@ -3,15 +3,19 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { LogoComponent } from '../../shared/logo/logo.component';
 
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, LogoComponent],
   template: `
+    <div class="page-wrap">
     <div class="card">
-      <h2>Login</h2>
+      <div class="brand">
+        <app-logo size="lg"></app-logo>
+      </div>
 
       <form [formGroup]="form" (ngSubmit)="submit()">
         <label>Email</label>
@@ -32,9 +36,12 @@ import { HttpErrorResponse } from '@angular/common/http';
         }
       </form>
     </div>
+    </div>
   `,
   styles: [`
-    .card { max-width: 420px; margin: 40px auto; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; }
+    .page-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f9fafb; padding: 16px; }
+    .card { width: 100%; max-width: 420px; padding: 28px 24px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.06); }
+    .brand { display: flex; justify-content: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6; }
     form { display: grid; gap: 10px; }
     input { padding: 10px; border: 1px solid #e5e7eb; border-radius: 10px; }
     button { padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #111827; color: #fff; cursor: pointer; }

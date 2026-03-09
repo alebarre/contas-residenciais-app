@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Rounded square background -->
+  <rect width="32" height="32" rx="7" fill="#111827"/>
+
+  <!-- House roof -->
+  <polygon points="16,5 29,17 3,17" fill="white"/>
+
+  <!-- Chimney -->
+  <rect x="20" y="8" width="3" height="7" rx="1" fill="white"/>
+
+  <!-- House body -->
+  <rect x="6" y="16" width="20" height="12" rx="1" fill="white"/>
+
+  <!-- Door -->
+  <rect x="13" y="21" width="6" height="7" rx="2" fill="#111827"/>
+
+  <!-- Coin (R$) circle -->
+  <circle cx="25" cy="8" r="5" fill="#f59e0b" stroke="white" stroke-width="1"/>
+  <text x="25" y="11.5" text-anchor="middle" font-size="6" font-weight="bold" fill="white" font-family="sans-serif">R$</text>
+</svg>

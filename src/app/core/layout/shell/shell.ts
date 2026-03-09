@@ -3,13 +3,14 @@ import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar';
 import { ToastComponent } from '../../../shared/toast/toast.component';
 import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
+import { LogoComponent } from '../../../shared/logo/logo.component';
 
 
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, ToastComponent, ConfirmComponent],
+  imports: [RouterOutlet, SidebarComponent, ToastComponent, ConfirmComponent, LogoComponent],
   template: `
     <!-- Backdrop mobile -->
     @if (isMobile() && sidebarOpen()) {
@@ -25,7 +26,7 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
       <main class="content">
         <header class="topbar">
           <button type="button" class="btn" (click)="sidebarOpen.set(!sidebarOpen())">☰</button>
-          <div class="title">Contas Residenciais</div>
+          <app-logo size="lg" class="topbar-logo"></app-logo>
           <div class="spacer"></div>
         </header>
 
@@ -73,7 +74,7 @@ import { ConfirmComponent } from '../../../shared/confirm/confirm.component';
     }
 
 
-    .title { font-weight: bolder; font-size: 40px; color: #98a3b9; text-align: center; }
+    .topbar-logo { justify-self: center; }
     .spacer { width: 24px; }
 
     .page {

@@ -53,25 +53,30 @@ export class ExportService {
 
     let y = 28;
 
-    // ====== HEADER — two-column compact layout ======
-    // Left : report title + subtitle
+    // ====== HEADER — logo + two-column layout ======
+    // Left : logo icon + report title + subtitle
     // Right: user name + email + analytics line
     {
       const pageWidth = doc.internal.pageSize.getWidth();
       const colMid = pageWidth / 2;
+      const logoPt = 28; // logo icon size in pt
+
+      // --- LOGO icon (drawn at top-left) ---
+      this.drawPdfLogo(doc, marginLeft, y - 10, logoPt);
+      const textOffX = marginLeft + logoPt + 8;
 
       // --- LEFT: title ---
       doc.setTextColor(17, 24, 39);
       doc.setFontSize(16);
       doc.setFont('', 'bold');
-      doc.text(String(data.title ?? ''), marginLeft, y + 2);
+      doc.text(String(data.title ?? ''), textOffX, y + 2);
 
       // --- LEFT: subtitle ---
       if (data.subtitle) {
         doc.setTextColor(107, 114, 128);
         doc.setFontSize(9);
         doc.setFont('', 'normal');
-        doc.text(data.subtitle, marginLeft, y + 15);
+        doc.text(data.subtitle, textOffX, y + 15);
       }
 
       // --- RIGHT: user info ---
@@ -224,6 +229,55 @@ export class ExportService {
     XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
 
     XLSX.writeFile(wb, `${data.fileBaseName}.xlsx`);
+  }
+
+  /**
+   * Desenha o logotipo (casinha + moeda R$) usando primitivas jsPDF.
+   * @param doc   instância jsPDF
+   * @param x     posição X (pt) do canto superior-esquerdo do ícone
+   * @param y     posição Y (pt) do canto superior-esquerdo do ícone
+   * @param size  tamanho do ícone em pt (default 24)
+   */
+  private drawPdfLogo(doc: jsPDF, x: number, y: number, size = 24): void {
+    const s = size / 32; // fator de escala em relação ao viewBox 32x32
+
+    // fundo arredondado escuro
+    doc.setFillColor(17, 24, 39);
+    doc.setDrawColor(17, 24, 39);
+    (doc as any).roundedRect(x, y, size, size, 7 * s, 7 * s, 'F');
+
+    // telhado (triângulo branco)
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(255, 255, 255);
+    (doc as any).triangle(
+      x + 16 * s, y + 5 * s,
+      x + 29 * s, y + 17 * s,
+      x + 3 * s, y + 17 * s,
+      'F'
+    );
+
+    // corpo da casa (retângulo branco)
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x + 6 * s, y + 16 * s, 20 * s, 12 * s, 'F');
+
+    // porta (escura)
+    doc.setFillColor(17, 24, 39);
+    doc.rect(x + 13 * s, y + 21 * s, 6 * s, 7 * s, 'F');
+
+    // moeda amarela
+    doc.setFillColor(245, 158, 11);
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.6);
+    doc.circle(x + 25 * s, y + 8 * s, 5 * s, 'FD');
+
+    // texto R$ na moeda
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('', 'bold');
+    doc.setFontSize(Math.max(4, 6 * s * (72 / 32)));
+    doc.text('R$', x + 25 * s, y + 10 * s, { align: 'center' });
+
+    // reset cor de texto
+    doc.setTextColor(17, 24, 39);
   }
 
   private downloadBlob(content: string, filename: string, mime: string): void {
