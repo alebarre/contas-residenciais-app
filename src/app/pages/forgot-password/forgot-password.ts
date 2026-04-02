@@ -73,6 +73,7 @@ export class ForgotPasswordComponent {
       error: () => {
         this.loading = false;
         this.success = 'Se o email estiver cadastrado, você receberá um código para redefinir a senha.';
+        this.router.navigate(['/reset-password'], { queryParams: { email } });
       }
     });
   }
