@@ -59,11 +59,11 @@ export class AuthService {
   }
 
   setUser(user: User) {
-    return this.http.put<AuthResponse>(`${this.API_URL}/auth/register`, user);
+    return this.http.put<AuthResponse>('/api/auth/register', user);
   }
 
   register(user: { nome: string; email: string; senha: string; telefone?: string; avatarUrl?: string }) {
-    return this.http.post<{ token: string; user: User }>(`${this.API_URL}/auth/register`, user);
+    return this.http.post<{ token: string; user: User }>('/api/auth/register', user);
   }
 
   /**
