@@ -129,9 +129,6 @@ export class DespesaFormComponent {
   constructor() {
     this.itensService.listar().subscribe(list => this.itens.set(list ?? []));
     this.bancosService.listarAtivos().subscribe(list => this.bancosAtivos.set(list ?? []));
-
-    // se já houver edição por id no seu app, aqui carregaria despesa e patchValue
-    // (mantive neutro para não inventar rotas que você não tenha)
   }
 
   label(pm: PaymentMethod): string {
@@ -159,7 +156,6 @@ export class DespesaFormComponent {
 
     this.saving.set(true);
 
-    // create (MVP). Se seu app já tem update por form, chamar atualizar aqui.
     this.despesasService.criar(payload).subscribe({
       next: () => {
         this.toast.success('Despesa salva.');
