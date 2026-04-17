@@ -1,27 +1,90 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guard';
+import { authChildGuard, authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', loadComponent: () => import('../app/pages/login/login').then(m => m.LoginComponent) },
-  { path: 'register', loadComponent: () => import('../app/pages/register/register').then(m => m.RegisterComponent) },
-  { path: 'forgot-password', loadComponent: () => import('../app/pages/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) },
-  { path: 'reset-password', loadComponent: () => import('../app/pages/reset-password/reset-password').then(m => m.ResetPasswordComponent) },
-
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('../app/pages/login/login').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'register',
+    loadComponent: () =>
+      import('../app/pages/register/register').then((m) => m.RegisterComponent),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('../app/pages/forgot-password/forgot-password').then(
+        (m) => m.ForgotPasswordComponent
+      ),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('../app/pages/reset-password/reset-password').then(
+        (m) => m.ResetPasswordComponent
+      ),
+  },
   {
     path: 'app',
     canActivate: [authGuard],
-    loadComponent: () => import('../app/core/layout/shell/shell').then(m => m.ShellComponent),
+    canActivateChild: [authChildGuard],
+    loadComponent: () =>
+      import('../app/core/layout/shell/shell').then((m) => m.ShellComponent),
     children: [
-      { path: 'dashboard', loadComponent: () => import('../app/pages/dashboard/dashboard').then(m => m.DashboardComponent) },
-      { path: 'itens', loadComponent: () => import('../app/pages/itens/itens').then(m => m.ItensComponent) },
-      { path: 'despesas/nova', loadComponent: () => import('./pages/despesa-form/despesa-form').then(m => m.DespesaFormComponent) },
-      { path: 'relatorio-mensal', loadComponent: () => import('../app/pages/relatorio-mensal/relatorio-mensal').then(m => m.RelatorioMensalComponent) },
-      { path: 'relatorio-anual', loadComponent: () => import('../app/pages/relatorio-anual/relatorio-anual').then(m => m.RelatorioAnualComponent) },
-      { path: 'perfil', loadComponent: () => import('../app/pages/perfil/perfil').then(m => m.PerfilComponent) },
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-    ]
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('../app/pages/dashboard/dashboard').then(
+            (m) => m.DashboardComponent
+          ),
+      },
+      {
+        path: 'itens',
+        loadComponent: () =>
+          import('../app/pages/itens/itens').then((m) => m.ItensComponent),
+      },
+      {
+        path: 'despesas/nova',
+        loadComponent: () =>
+          import('./pages/despesa-form/despesa-form').then(
+            (m) => m.DespesaFormComponent
+          ),
+      },
+      {
+        path: 'relatorio-mensal',
+        loadComponent: () =>
+          import('../app/pages/relatorio-mensal/relatorio-mensal').then(
+            (m) => m.RelatorioMensalComponent
+          ),
+      },
+      {
+        path: 'relatorio-anual',
+        loadComponent: () =>
+          import('../app/pages/relatorio-anual/relatorio-anual').then(
+            (m) => m.RelatorioAnualComponent
+          ),
+      },
+      {
+        path: 'perfil',
+        loadComponent: () =>
+          import('../app/pages/perfil/perfil').then((m) => m.PerfilComponent),
+      },
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+    ],
   },
-
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
-  { path: '**', redirectTo: 'login' },
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'login',
+  },
+  {
+    path: '**',
+    redirectTo: 'login',
+  },
 ];

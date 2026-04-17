@@ -1,13 +1,28 @@
-import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import {
+  CanActivateChildFn,
+  CanActivateFn,
+  Router,
+  UrlTree,
+} from '@angular/router';
 import { AuthService } from './auth.service';
 
-export const authGuard: CanActivateFn = () => {
-  const router = inject(Router);
+function validateSession(): true | UrlTree {
   const auth = inject(AuthService);
+  const router = inject(Router);
 
-  if (auth.isLoggedIn()) return true;
+  if (auth.hasValidSession()) {
+    return true;
+  }
 
-  router.navigateByUrl('/login');
-  return false;
+  auth.logout();
+  return router.createUrlTree(['/login']);
+}
+
+export const authGuard: CanActivateFn = () => {
+  return validateSession();
+};
+
+export const authChildGuard: CanActivateChildFn = () => {
+  return validateSession();
 };

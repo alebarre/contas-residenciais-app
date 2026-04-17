@@ -36,6 +36,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
       </div>
     </div>
 
+    <ng-container *ngIf="!dashboardLoading(); else dashboardLoadingState">
     <section class="cards" *ngIf="resumo() as r">
       <div class="card">
         <div class="k">Contas nesse mês</div>
@@ -126,6 +127,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
             <div class="field">
               <label>Banco de pagamento</label>
               <select [(ngModel)]="e.bancoCode" (ngModelChange)="onBancoEditChange($event)">
+                <option *ngIf="bancosLoading()" [ngValue]="e.bancoCode" disabled>Carregando...</option>
                 <option [ngValue]="null">(Sem banco)</option>
                 <option *ngFor="let b of bancosSelect()" [ngValue]="b.code">{{ bancoLabel(b) }}</option>
               </select>
@@ -202,8 +204,58 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
         </div>
       </ng-template>
     </section>
+    </ng-container>
+
+    <ng-template #dashboardLoadingState>
+      <div class="loading-shell">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div class="loading-title">Carregando dashboard...</div>
+        <div class="loading-subtitle">
+          Aguarde enquanto buscamos os dados mais recentes.
+        </div>
+      </div>
+    </ng-template>
   `,
   styles: [`
+    .loading-shell {
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border: 1px dashed #d1d5db;
+      border-radius: 16px;
+      background: #fff;
+      margin-top: 8px;
+      text-align: center;
+      padding: 32px 16px;
+    }
+
+    .loading-spinner {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      border: 6px solid #e5e7eb;
+      border-top-color: #111827;
+      animation: spin .9s linear infinite;
+    }
+
+    .loading-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .loading-subtitle {
+      color: #6b7280;
+      max-width: 420px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .header {
       display: flex;
       align-items: center;
@@ -500,6 +552,10 @@ export class DashboardComponent {
   despesas = signal<Despesa[]>([]);
   itens = signal<Item[]>([]);
 
+  dashboardLoading = signal<boolean>(true);
+  itensLoading = signal<boolean>(true);
+  bancosLoading = signal<boolean>(true);
+
   bancosAll = signal<Banco[]>([]);
   bancosAtivos = signal<Banco[]>([]);
 
@@ -555,15 +611,27 @@ export class DashboardComponent {
   constructor() {
     this.reload();
 
-    // itens
-    this.itensService.listar().subscribe(list => this.itens.set(list ?? []));
-
-    // bancos (catálogo via API + overrides locais)
-    this.bancosService.listarTodos().subscribe(list => {
-      this.bancosAll.set(list);
-      this.syncBancoNomeFromCode();
+    this.itensLoading.set(true);
+    this.itensService.listar().subscribe({
+      next: (list) => this.itens.set(list ?? []),
+      error: () => this.itens.set([]),
+      complete: () => this.itensLoading.set(false)
     });
-    this.bancosService.listarAtivos().subscribe(list => this.bancosAtivos.set(list));
+
+    this.bancosLoading.set(true);
+    this.bancosService.listarTodos().subscribe({
+      next: (list) => {
+        this.bancosAll.set(list ?? []);
+        this.syncBancoNomeFromCode();
+      },
+      error: () => this.bancosAll.set([]),
+      complete: () => this.bancosLoading.set(false)
+    });
+
+    this.bancosService.listarAtivos().subscribe({
+      next: (list) => this.bancosAtivos.set(list ?? []),
+      error: () => this.bancosAtivos.set([])
+    });
   }
 
   getAtividadeDoItem(itemId: string): string {
@@ -710,10 +778,19 @@ export class DashboardComponent {
     const ano = this.ano();
     const mes = this.mes();
 
-    //1 chamada única: summary (inclui historicoMensal) + expenses do mês
-    this.dashboardService.getDashboard(ano, mes).subscribe((payload) => {
-      this.despesas.set(payload.expenses ?? []);
-      this.resumo.set(payload.summary);
+    this.dashboardLoading.set(true);
+
+    this.dashboardService.getDashboard(ano, mes).subscribe({
+      next: (payload) => {
+        this.despesas.set(payload.expenses ?? []);
+        this.resumo.set(payload.summary ?? null);
+      },
+      error: () => {
+        this.despesas.set([]);
+        this.resumo.set(null);
+        this.toast.error('Não foi possível carregar o dashboard.');
+      },
+      complete: () => this.dashboardLoading.set(false)
     });
   }
 
