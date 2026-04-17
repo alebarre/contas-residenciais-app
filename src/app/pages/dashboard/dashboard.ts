@@ -561,6 +561,8 @@ export class DashboardComponent {
 
   paymentLabel = PAYMENT_METHOD_LABEL;
 
+  @ViewChild('editCard') editCard!: ElementRef<HTMLDivElement>;
+
   bancosSelect = computed(() => {
     const ativos = this.bancosAtivos();
     const e = this.editando();
@@ -645,10 +647,17 @@ export class DashboardComponent {
   editar(d: Despesa): void {
     this.erroEdicao.set('');
     const copia = { ...d, dataPagamento: d.dataPagamento ?? null };
-    this.editandoOriginal.set({ ...copia }); // guarda original
-    this.editando.set(copia);                // edição
+    this.editandoOriginal.set({ ...copia });
+    this.editando.set(copia);
 
     this.syncBancoNomeFromCode();
+
+    setTimeout(() => {
+      this.editCard?.nativeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 0);
   }
 
   /* cancelarEdicao - descarta edição com confirmação se houver mudanças.
