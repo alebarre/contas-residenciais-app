@@ -84,53 +84,65 @@ import { forkJoin } from 'rxjs';
         </div>
 
         <div class="list">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-tipo">Tipo</th>
-                <th class="col-nome">Nome</th>
-                <th class="col-atividade">Atividade</th>
-                <th class="col-status">Status</th>
-                <th class="col-acoes">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of itensVisiveis()">
-                <td class="col-tipo">{{ item.tipo }}</td>
-                <td class="col-nome">{{ item.nome }}</td>
-                <td class="col-atividade">{{ item.atividade }}</td>
+          <ng-container *ngIf="!itensLoading(); else itensLoadingState">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-tipo">Tipo</th>
+                  <th class="col-nome">Nome</th>
+                  <th class="col-atividade">Atividade</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-acoes">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of itensVisiveis()">
+                  <td class="col-tipo">{{ item.tipo }}</td>
+                  <td class="col-nome">{{ item.nome }}</td>
+                  <td class="col-atividade">{{ item.atividade }}</td>
 
-                <td class="col-status">
-                  <span class="pill" [class.off]="!item.ativo">
-                    {{ item.ativo ? 'Ativo' : 'Inativo' }}
-                  </span>
-                </td>
+                  <td class="col-status">
+                    <span class="pill" [class.off]="!item.ativo">
+                      {{ item.ativo ? 'Ativo' : 'Inativo' }}
+                    </span>
+                  </td>
 
-                <td class="col-acoes">
-                  <button class="btn-sm" (click)="iniciarEdicao(item)" [disabled]="!item.ativo">
-                    Editar
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-secondary"
-                    *ngIf="item.ativo"
-                    (click)="inativarItem(item)">
-                    Inativar
-                  </button>
+                  <td class="col-acoes">
+                    <button class="btn-sm" (click)="iniciarEdicao(item)" [disabled]="!item.ativo">
+                      Editar
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-secondary"
+                      *ngIf="item.ativo"
+                      (click)="inativarItem(item)">
+                      Inativar
+                    </button>
 
-                  <button
-                    class="btn btn-sm btn-outline-success"
-                    *ngIf="!item.ativo"
-                    (click)="ativarItem(item)">
-                    Ativar
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <button
+                      class="btn btn-sm btn-outline-success"
+                      *ngIf="!item.ativo"
+                      (click)="ativarItem(item)">
+                      Ativar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          <div class="empty" *ngIf="!itensVisiveis().length">
-            {{ itens().length ? 'Nenhum item encontrado para "' + itensBusca() + '".' : 'Nenhum item cadastrado.' }}
-          </div>
+            <div class="empty" *ngIf="!itensVisiveis().length">
+              {{ itens().length ? 'Nenhum item encontrado para "' + itensBusca() + '".' : 'Nenhum item cadastrado.' }}
+            </div>
+          </ng-container>
+
+          <ng-template #itensLoadingState>
+            <div class="loading-shell">
+              <div class="loading-spinner" aria-hidden="true"></div>
+              <div class="loading-title">Carregando itens...</div>
+              <div class="loading-subtitle">
+                Aguarde enquanto buscamos os dados cadastrados.
+              </div>
+            </div>
+          </ng-template>
         </div>
       </ng-container>
 
@@ -177,47 +189,98 @@ import { forkJoin } from 'rxjs';
         </div>
 
         <div class="list">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-bank-code">Código</th>
-                <th class="col-bank-name">Nome</th>
-                <th class="col-status">Status</th>
-                <th class="col-acoes">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let b of bancosVisiveis()">
-                <td class="col-bank-code">{{ b.code }}</td>
-                <td class="col-bank-name">{{ b.name }}</td>
-                <td class="col-status">
-                  <span class="pill" [class.off]="isBancoInativo(b)">
-                    {{ isBancoInativo(b) ? 'Inativo' : 'Ativo' }}
-                  </span>
-                </td>
-                <td class="col-acoes">
-                  <button
-                    class="btn-sm danger"
-                    *ngIf="!isBancoInativo(b)"
-                    (click)="inativarBanco(b)"
-                  >
-                    Inativar
-                  </button>
-                  <button class="btn-sm" *ngIf="isBancoInativo(b)" (click)="reativarBanco(b)">
-                    Reativar
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <ng-container *ngIf="!bancosLoading(); else bancosLoadingState">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-bank-code">Código</th>
+                  <th class="col-bank-name">Nome</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-acoes">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let b of bancosVisiveis()">
+                  <td class="col-bank-code">{{ b.code }}</td>
+                  <td class="col-bank-name">{{ b.name }}</td>
+                  <td class="col-status">
+                    <span class="pill" [class.off]="isBancoInativo(b)">
+                      {{ isBancoInativo(b) ? 'Inativo' : 'Ativo' }}
+                    </span>
+                  </td>
+                  <td class="col-acoes">
+                    <button
+                      class="btn-sm danger"
+                      *ngIf="!isBancoInativo(b)"
+                      (click)="inativarBanco(b)"
+                    >
+                      Inativar
+                    </button>
+                    <button class="btn-sm" *ngIf="isBancoInativo(b)" (click)="reativarBanco(b)">
+                      Reativar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          <div class="empty" *ngIf="!bancos().length">Nenhum banco carregado.</div>
+            <div class="empty" *ngIf="!bancos().length">Nenhum banco carregado.</div>
+          </ng-container>
+
+          <ng-template #bancosLoadingState>
+            <div class="loading-shell">
+              <div class="loading-spinner" aria-hidden="true"></div>
+              <div class="loading-title">Carregando bancos...</div>
+              <div class="loading-subtitle">
+                A lista será exibida assim que o catálogo estiver disponível.
+              </div>
+            </div>
+          </ng-template>
         </div>
       </ng-container>
     </div>
   `,
   styles: [
     `
+      .loading-shell {
+        min-height: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        border: 1px dashed #d1d5db;
+        border-radius: 16px;
+        background: #fff;
+        margin-top: 10px;
+        text-align: center;
+        padding: 24px 16px;
+      }
+
+      .loading-spinner {
+        width: 64px;
+        height: 64px;
+        border-radius: 999px;
+        border: 6px solid #e5e7eb;
+        border-top-color: #111827;
+        animation: spin .9s linear infinite;
+      }
+
+      .loading-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      .loading-subtitle {
+        color: #6b7280;
+        max-width: 420px;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
       .wrap {
         max-width: 980px;
         margin: 0 auto;
@@ -464,7 +527,8 @@ export class ItensComponent {
 
   itens = signal<Item[]>([]);
   bancos = signal<Banco[]>([]);
-  bancosLoading = signal<boolean>(false);
+  itensLoading = signal<boolean>(true);
+  bancosLoading = signal<boolean>(true);
   bancoBusca = signal<string>('');
   itensBusca = signal<string>('');
   aba = signal<'itens' | 'bancos'>('itens');
@@ -486,16 +550,30 @@ export class ItensComponent {
   }
 
   carregar(): void {
-    this.service.listar().subscribe((list) => this.itens.set(list));
+    this.itensLoading.set(true);
+
+    this.service.listar().subscribe({
+      next: (list) => this.itens.set(list ?? []),
+      error: () => {
+        this.itens.set([]);
+        this.toastService.error('Falha ao carregar itens.');
+      },
+      complete: () => this.itensLoading.set(false),
+    });
   }
 
   carregarBancos(q?: string): void {
+    this.bancosLoading.set(true);
+
     this.bancosService.listarTodos(q).subscribe({
       next: (list) => {
-        this.bancos.set(list);
-        // força o template a reavaliar de forma estável
+        this.bancos.set(list ?? []);
       },
-      error: () => this.toastService.error('Falha ao carregar bancos.'),
+      error: () => {
+        this.bancos.set([]);
+        this.toastService.error('Falha ao carregar bancos.');
+      },
+      complete: () => this.bancosLoading.set(false),
     });
   }
 

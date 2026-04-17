@@ -31,7 +31,7 @@ import { PaymentMethod, PAYMENT_METHOD_LABEL, Despesa } from '../../models/despe
           <div class="field">
             <label>Item</label>
             <select formControlName="itemId">
-              <option value="" disabled>Selecione...</option>
+              <option value="" disabled>{{ itensLoading() ? 'Carregando...' : 'Selecione...' }}</option>
               <option *ngFor="let i of itens()" [value]="i.id">{{ i.nome }}</option>
             </select>
           </div>
@@ -49,6 +49,7 @@ import { PaymentMethod, PAYMENT_METHOD_LABEL, Despesa } from '../../models/despe
           <div class="field">
             <label>Banco (opcional)</label>
             <select formControlName="bancoCode">
+              <option *ngIf="bancosLoading()" [ngValue]="null" disabled>Carregando...</option>
               <option [ngValue]="null">(Sem banco)</option>
               <option *ngFor="let b of bancosAtivos()" [ngValue]="b.code">{{ b.name }}</option>
             </select>
@@ -109,6 +110,8 @@ export class DespesaFormComponent {
 
   itens = signal<Item[]>([]);
   bancosAtivos = signal<Banco[]>([]);
+  itensLoading = signal(true);
+  bancosLoading = signal(true);
   saving = signal(false);
 
   paymentMethods: PaymentMethod[] = ['PIX', 'DINHEIRO', 'CREDITO', 'TRANSFERENCIA', 'OUTROS'];
@@ -127,8 +130,19 @@ export class DespesaFormComponent {
   });
 
   constructor() {
-    this.itensService.listar().subscribe(list => this.itens.set(list ?? []));
-    this.bancosService.listarAtivos().subscribe(list => this.bancosAtivos.set(list ?? []));
+    this.itensLoading.set(true);
+    this.itensService.listar({ onlyActive: true }).subscribe({
+      next: (list) => this.itens.set(list ?? []),
+      error: () => this.itens.set([]),
+      complete: () => this.itensLoading.set(false)
+    });
+
+    this.bancosLoading.set(true);
+    this.bancosService.listarAtivos().subscribe({
+      next: (list) => this.bancosAtivos.set(list ?? []),
+      error: () => this.bancosAtivos.set([]),
+      complete: () => this.bancosLoading.set(false)
+    });
   }
 
   label(pm: PaymentMethod): string {
