@@ -24,16 +24,16 @@ import { LogoComponent } from '../../shared/logo/logo.component';
         <label>Senha</label>
         <input type="password" formControlName="senha" />
 
-        <button type="submit" [disabled]="form.invalid || loading()">Entrar</button>
+        <button type="submit" [disabled]="form.invalid || loading()">
+          {{ loading() ? 'Entrando...' : 'Entrar' }}
+        </button>
 
         <div class="links">
           <a routerLink="/register">Criar conta</a>
           <a routerLink="/forgot-password">Esqueci minha senha</a>
         </div>
 
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
+        <p class="error" *ngIf="error()">{{ error() }}</p>
       </form>
     </div>
     </div>

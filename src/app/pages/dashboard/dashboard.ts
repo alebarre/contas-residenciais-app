@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { DespesasService } from '../../services/despesas.service';
@@ -110,7 +110,7 @@ import { PAYMENT_METHOD_LABEL } from '../../models/despesa.model';
       </div>
 
       <div class="list-header">
-        <div class="edit-card" *ngIf="editando() as e">
+        <div class="edit-card" *ngIf="editando() as e" #editCard>
           <div class="edit-title">Editando: <b>{{ e.itemNome }}</b></div>
 
           <div class="edit-grid">
